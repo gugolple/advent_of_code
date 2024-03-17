@@ -20,13 +20,17 @@ const fn manhattan_distance(org: &Position, dst: &Position) -> i64 {
 fn overal_at_row(sensor: &Position, beacon: &Position, row: &i64) -> Option<Range> {
     let dist = manhattan_distance(sensor, beacon);
     let dist_at_row = manhattan_distance(sensor, &Position{x: sensor.x, y: *row});
-    println!("Distance: {} DeltaDistance: {}", dist, dist_at_row);
+    let mut res: Option<Range> = None;
+    print!("Distance: {} RowDistance: {}", dist, dist_at_row);
     if dist_at_row <= dist {
         // + 1 to include the destination squares
-        let delta = (dist - dist_at_row)/2 + 1;
-        return Some(Range{start: sensor.x - delta, end: sensor.x + delta});
+        let delta = dist - dist_at_row;
+        let ran = Range{start: sensor.x - delta, end: sensor.x + delta};
+        print!(" Range: {:?}", ran);
+        res = Some(ran);
     }
-    None
+    println!("");
+    return res;
 }
 
 fn process_input(input: &str, row: i64) -> u64 {
@@ -49,6 +53,7 @@ fn process_input(input: &str, row: i64) -> u64 {
             ));
         }
     }
+    println!("");
 
     let mut ranges: Vec<Range> = Vec::new();
     for (sen, bec) in sensors_beacons.iter() {
@@ -67,8 +72,12 @@ fn process_input(input: &str, row: i64) -> u64 {
         if cur_range.is_none() {
             cur_range = Some(ran);
         } else {
-            if ran.start < cur_range.as_ref().expect("Has data").end {
-                cur_range.as_mut().expect("Has data").end = ran.end;
+            // If it is in range
+            if ran.start <= cur_range.as_ref().expect("Has data").end {
+                // Has more data
+                if ran.end > cur_range.as_mut().expect("Has data").end {
+                    cur_range.as_mut().expect("Has data").end = ran.end;
+                }
             } else {
                 actual_ranges.push(cur_range.expect("Already has data"));
                 cur_range = Some(ran);
@@ -81,7 +90,7 @@ fn process_input(input: &str, row: i64) -> u64 {
     let mut total = 0;
     for r in actual_ranges.iter() {
         println!("RR: {:?}", r);
-        total = total + r.end - r.start + 1; // +1 to include
+        total = total + r.end - r.start;
     }
 
     return total.try_into().unwrap();
