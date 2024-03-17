@@ -5,14 +5,15 @@ PODMAN_CMD = podman run -v ./srcs:/mnt:Z ${PODMAN_CONTAINER}
 SOURCE_DIRS = $(wildcard ./p*)
 SOURCES = $(wildcard *.c)
 
+ifndef NPROC
+NPROC = $(shell nproc --all)
+endif
+
 ifndef RELATIVE_PATH
 .PHONY: all
 %:
-	for I in ${SOURCE_DIRS} ; do \
-		cd $${I} ;\
-		make RELATIVE_PATH=$${I} -f ../Makefile $@ ;\
-		cd .. ;\
-	done
+	#echo ${NRPOC} # Show number of proccessors for the exeuction
+	printf "%s\0" ${SOURCE_DIRS} | xargs -P${NPROC} -0 -I{} bash -c "echo {} ; cd {} ; make RELATIVE_PATH={} -f ../Makefile $@ >result.txt 2>&1"
 
 else
 all: check test
