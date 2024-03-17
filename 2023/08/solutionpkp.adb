@@ -171,16 +171,14 @@ package body solutionpkp is
 		current_idx : Integer
 		) return Boolean
 	is
-		ii : IterIndex;
+		ii : IterIndex := (iterations, current_idx);
 		res : boolean := False;
 	begin
-		ii.iterations := iterations;
-		ii.index := current_idx;
+		Put_Line("Iterations: " & Iterations'Image & " idx: " & current_idx'Image);
 		if not IterIndexVector.Contains(iiv, ii) then
+			Put_Line("Appended!");
 			iiv.append(ii);
 			res := True;
-		else
-			Put_Line("Same internal?!?!? Iterations: " & Iterations'Image & " idx: " & current_idx'Image);
 		end if;
 		return res;
 	end IIV_Logic;
@@ -204,7 +202,6 @@ package body solutionpkp is
 					total := total + 1;
 					--Put_Line("Current_node: " & To_String(current_node));
 					if Element(current_node, Length(current_node)) = 'Z' then
-						Put_Line("Found!");
 						if not IIV_Logic(iterAcum, total, current_idx) then
 							continue := False;
 							exit;
@@ -301,8 +298,16 @@ package body solutionpkp is
 		Put_Line("Post procesing");
 		for S of all_locations loop
 			all_steps.append(Vectorize(S));
+			Put_Line("");
 			Put_Line("Iterations of: " & To_String(S));
 			for II of IterIndexVectorVector.Last_element(all_steps) loop
+				Put_Line("Iterations: " & II.Iterations'Image & " Idx: " & II.Index'Image);
+			end loop;
+		end loop;
+
+		Put_Line("Final procesing");
+		for AS of all_steps loop
+			for II of AS loop
 				Put_Line("Iterations: " & II.Iterations'Image & " Idx: " & II.Index'Image);
 			end loop;
 		end loop;
