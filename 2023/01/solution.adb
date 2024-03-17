@@ -1,8 +1,6 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Characters.Handling;
-use  Ada.Characters.Handling;
-with Ada.Strings.Unbounded;
-use  Ada.Strings.Unbounded;
+with Ada.Characters.Handling; use  Ada.Characters.Handling;
+with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
 
 procedure solution is
 	F         : File_Type;
