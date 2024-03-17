@@ -1,9 +1,11 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
+with Ada.Strings.Maps; use Ada.Strings.Maps;
 
 with solutionpk; use solutionpk;
 
 package body solutionpk is
+	state: StateMachine;
 	procedure statemachine_proc(
 		capture: in Unbounded_String
 		)
