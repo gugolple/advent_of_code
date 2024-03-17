@@ -17,20 +17,20 @@ fn recurse_set_sizes(root: Rc<FsDesc>, thresh: u64) -> u64{
     for child in &*root.children.borrow() {
         if child.children.borrow().len() == 0 {
             println!("File {} {}", child.name, child.size.borrow());
-            tot_size = tot_size + *child.size.borrow();
         } else {
             let temp_recurse_size = recurse_set_sizes(child.clone(), thresh);
-            // Add the recursion to OUR OWN size
-            tot_size = tot_size + temp_recurse_size;
-            // Keep the recursion size
+            // Keep the recursion size separately from the actual size
             recurse_size = recurse_size + temp_recurse_size;
             println!("Back at dir {}", root.name);
         }
+        //Always keep track of size directly by children
+        tot_size = tot_size + *child.size.borrow();
     }
     println!("Res dir name: {} size: {}", root.name, tot_size);
     if tot_size < thresh {
         recurse_size = recurse_size + tot_size;
     }
+    // Set our size directly of the good size data
     *root.size.borrow_mut() = tot_size;
     return recurse_size;
 }
