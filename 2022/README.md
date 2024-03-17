@@ -1,6 +1,10 @@
-# Advent code of 2022
+# Advent code of 2022 in Rust
 
-This is my small repo just solving the challenges in rust. A lot of fun!.
+This is me just solving the challenges in rust. A lot of fun!.
+
+In this is also an experiment with the capabilities of utilities like
+docker/podman for managing the compilation of code, that were quite
+satisfactory.
 
 # Execution
 
