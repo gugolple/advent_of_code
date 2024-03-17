@@ -31,27 +31,25 @@ def contained(value: int, rules: list[list[int]]):
             return True
     return False
 
-def main(rules, mine, rest, search="departure"):
-    good_tickets = filter(rules, mine, rest)
-    #print(good_tickets)
-
-    found_cols = [None] * len(rules)
-    pending_rules = rules.copy()
-
+def full_search(rules, good_tickets, assigned_cols = None):
+    last_count = len(rules) + 1
+    if assigned_cols is None:
+        assigned_cols = [None] * len(rules)
+    else:
+        last_count = assigned_cols.count(None) 
+    iter_cols = [ [] for _ in range(len(rules))]
     print("Start")
-#    while len(pending_rules) > 0:
-    last_count = 0 
-    while last_count != found_cols.count(None):
-        last_count = found_cols.count(None) 
-        iter_items = list(pending_rules.items())
+    if last_count > 0: 
+        last_count = assigned_cols.count(None) 
+        iter_items = list(rules.items())
         for pendingKey, pendingValues in iter_items:
-            print(pendingKey, pendingValues)
+            #print(pendingKey, pendingValues)
             key_matches = 0
             key_col = -1
             # Which column matches
             for col in range(len(good_tickets[0])):
                 # Skip known columns
-                if found_cols[col] is not None:
+                if assigned_cols[col] is not None:
                     break
                 valid = True
                 for ticket in good_tickets:
@@ -63,12 +61,39 @@ def main(rules, mine, rest, search="departure"):
                     key_matches += 1
             if key_matches == 1:
                 print("Single", key_col)
-                found_cols[key_col] = pendingKey
-                pending_rules.pop(pendingKey, None)
+                iter_cols[key_col].append(pendingKey)
             else:
-                print(key_matches)
-        print(found_cols)
-        print()
+                #print(key_matches)
+                pass
+        #print(assigned_cols)
+        #print()
+    else:
+        # Base case, all assigned
+        return assigned_cols
+
+    icc = len(iter_cols) - iter_cols.count(None)
+    if icc > 0:
+        for pi, pkl in enumerate(iter_cols):
+            if len(pkl) == 0:
+                continue
+            print(pkl,  "####################")
+            for pk in pkl:
+                print(icc, "----------------------------", pk)
+                pending_rules = rules.copy()
+                pending_rules.pop(pk, None)
+                nc = assigned_cols.copy()
+                nc[pi] = pk
+                res = full_search(pending_rules, good_tickets, nc)
+                if res is not None:
+                    return res
+    return None
+
+def main(rules, mine, rest, search="departure"):
+    good_tickets = filter(rules, mine, rest)
+    #print(good_tickets)
+
+    found_cols = full_search(rules, good_tickets)
+    print(found_cols)
 
     total = 1
     for idx,fcn in enumerate(found_cols):
