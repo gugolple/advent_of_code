@@ -1,5 +1,4 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
 with Ada.Strings.Maps; use Ada.Strings.Maps;
 
 with Ada.Containers; use Ada.Containers;
@@ -70,73 +69,66 @@ package body solutionpk is
 		statemachine_proc(To_Unbounded_String(Slice(capture,idxl,Length(capture))));
 	end line_proc;
 
-
-	count_pos : long_integer := 0;
-	procedure CheckValid is
-		beg, fin, tfin : Integer := 1;
-		Broken : constant Character_Set := To_Set("#");
-		Working : constant Character_Set := To_Set(".");
-		valid : Boolean := True;
-	begin
-		for L of values loop
-			beg := Index(
-				Source => process_line,
-				Set => Broken,
-				From => fin
-				);
-			if beg = 0 then
-				valid := False;
-				exit;
-			end if;
-			fin := Index(
-				Source => process_line,
-				Set => Working,
-				From => beg
-				);
-			if fin = 0 then
-				tfin := fin;
-				fin := Length(process_line)+1;
-			end if;
-			--Put_Line("F: " & Fin'Image & "B: " & Beg'Image);
-			if fin-beg /= L then
-				valid := False;
-				exit;
-			end if;
-		end loop;
-		if valid and tfin /= 0 then
-			beg := Index(
-				Source => process_line,
-				Set => Broken,
-				From => fin
-				);
-			if beg /= 0 then
-				valid := false;
-			end if;
-		end if;
-		if valid then
-			Put_Line("RecursedLine: " & To_String(process_line) & " Valid: " & Valid'Image);
-			count_pos := count_pos + 1;
-		end if;
-	end CheckValid;
-
-	procedure RecurseSolution is
+	function RecurseSolution(str: Unbounded_String; nums: IntegerVector.Vector) return Long_Integer is
+		total : Long_Integer := 0;
 		idx : Integer;
-		Search_Set : constant Character_Set := To_Set("?");
+		first_val : Integer;
+		next_nums : IntegerVector.Vector;
+		nstr : Unbounded_String;
 	begin
-		idx := Index(
-			Source => process_line,
-			Set => Search_Set,
-			From => 1
-			);
-		if idx = 0 then
-			CheckValid;
-		else
-			overwrite(process_line, idx, ".");
-			RecurseSolution;
-			overwrite(process_line, idx, "#");
-			RecurseSolution;
-			overwrite(process_line, idx, "?");
+		--for I of nums loop
+		--	Put(I'Image & " ");
+		--end loop;
+		--Put_Line("Str: " & To_String(str));
+		if Length(str) = 0 then
+			if Length(nums) = 0 then
+				return 1;
+			else
+				return 0;
+			end if;
 		end if;
+		if Length(nums) = 0 then
+			if Index(str, "#", 1) = 0 then
+				return 1;
+			else
+				return 0;
+			end if;
+		end if;
+
+		-- Respect it as a working
+		idx := Index(str, To_Set(".?"), 1);
+		if idx > 0 then
+			nstr := To_Unbounded_String("");
+			for I in idx+1 .. Length(str) loop
+				append(nstr,Element(str, I));
+			end loop;
+			--Put_Line(".nstr: " & To_String(nstr));
+			total := total + RecurseSolution(nstr, nums);
+		end if;
+		-- Respect it as a broken
+		idx := Index(str, To_Set("#?"), 1);
+		if idx > 0 then
+			first_val := First_Element(nums);
+			if first_val <= Length(str) and (Index(str, To_Set("."), 1) = 0 or Index(str, To_Set("."), 1) > first_val) then
+				if Length(str) = first_val or (first_val+1 <= Length(str) and then Element(str, first_val+1) /= '#') then
+					for I in 1 .. Integer(Length(nums))-1 loop
+						next_nums.append(nums(I));
+					end loop;
+					nstr := To_Unbounded_String("");
+					for I in first_val+2 .. Length(str) loop
+						append(nstr,Element(str, I));
+					end loop;
+					--Put_Line("#nstr: " & To_String(nstr));
+					total := total + recursesolution(nstr, next_nums);
+				end if;
+			end if;
+		end if;
+		--for I of nums loop
+		--	Put(I'Image & " ");
+		--end loop;
+		--Put_Line("Str: " & To_String(str));
+		--Put_Line("Total: " & total'Image);
+		return total;
 	end RecurseSolution;
 
 
@@ -144,6 +136,9 @@ package body solutionpk is
 		F         : File_Type;
 		File_Name : constant String := "input.txt";
 		str       : Unbounded_String;
+		total     : Long_Integer := 0;
+		current   : Long_Integer;
+		t: Unbounded_String;
 	begin
 		Open (F, In_File, File_Name);
 		while not End_Of_File (F) loop
@@ -154,16 +149,17 @@ package body solutionpk is
 			Put_Line(To_String(str));
 			line_proc(str);
 
-			Put_Line("Input: " & To_String(process_line));
-			for I of values loop
-				Put(I'Image & " ");
-			end loop;
-			Put_Line("");
+			--Put_Line("Input: " & To_String(process_line));
+			--for I of values loop
+			--	Put(I'Image & " ");
+			--end loop;
+			--Put_Line("");
 
-			RecurseSolution;
-
-			Put_Line("CountPos: " & Count_Pos'Image);
+			current := RecurseSolution(process_line, values);
+			Put_Line(current'Image);
+			total := total + current;
 		end loop;
 		Close (F);
+		Put_Line("Total: " & total'Image);
 	end Main;
 end solutionpk;
