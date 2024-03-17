@@ -118,7 +118,7 @@ package body solutionpk is
 		Put_Line("End");
 		Put_Line("");
 
-		if hwall then
+		if hwall and best_hor >= best_vert then
 			total := idx_hor;
 		else
 			total := 100 * idx_vert; 
