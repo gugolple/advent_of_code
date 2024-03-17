@@ -54,12 +54,15 @@ fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
                     return false;
                 }
             } else {
-
+                let delta = (ldepth as i64 - rdepth as i64).abs();
                 if ldepth < rdepth {
                     if ldepthred == 0 {
                         return false;
                     }
                     if ldepthcheck {
+                        return true;
+                    }
+                    if delta > 1 {
                         return true;
                     }
                     ldepthcheck = true;
@@ -68,6 +71,9 @@ fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
                         return true;
                     }
                     if rdepthcheck {
+                        return false;
+                    }
+                    if delta > 1 {
                         return false;
                     }
                     rdepthcheck = true;
@@ -255,14 +261,14 @@ mod tests {
     }
 
     #[test]
-    fn test_advent_basicA() {
+    fn test_advent_basica() {
         let input = "[1]
 [[2,3]] ";
         assert_eq!(process_input(input),1,"Test has failed");
     }
 
     #[test]
-    fn test_advent_basicB() {
+    fn test_advent_basicb() {
         let input = "[[2,3]]
 [[[2, 3]],3] ";
         assert_eq!(process_input(input),0,"Test has failed");
