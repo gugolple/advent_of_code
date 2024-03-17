@@ -1,15 +1,69 @@
 use std::io;
 use std::io::prelude::*;
 
+#[derive(Debug)]
+struct Position {
+    x: i64,
+    y: i64,
+}
 
-fn process_input(input: &str, row: u64) -> u64 {
+
+#[derive(Debug)]
+struct Range {
+    start: i64,
+    end: i64
+}
+
+const fn manhattan_distance(org: &Position, dst: &Position) -> i64 {
+    (dst.x - org.x).abs() + (dst.y - org.y).abs()
+}
+
+fn overal_at_row(sensor: &Position, beacon: &Position, row: &i64) -> Option<Range> {
+    let dist = manhattan_distance(sensor, beacon);
+    let dist_at_row = manhattan_distance(sensor, &Position{x: sensor.x, y: *row});
+    println!("Distance: {} DeltaDistance: {}", dist, dist_at_row);
+    if dist_at_row <= dist {
+        let delta = (dist - dist_at_row)/2;
+        return Some(Range{start: sensor.x - delta, end: sensor.x + delta});
+    }
+    None
+}
+
+fn process_input(input: &str, row: i64) -> u64 {
+    let mut sensors_beacons: Vec<(Position, Position)> = Vec::new();
     for line in input.split("\n") {
         if line != "" {
-            println!("Line!: {}", line);
+            let sensor_beacon: Vec<_> = line.split(":").collect();
+            let sensor: Vec<_> = sensor_beacon[0].split("at ").skip(1).take(1).collect::<Vec<_>>()[0].split(", ").map(|x| x.split("=").skip(1).take(1).collect::<Vec<_>>()[0].parse::<i64>().unwrap()).collect();
+            let beacon: Vec<_> = sensor_beacon[1].split("at ").skip(1).take(1).collect::<Vec<_>>()[0].split(", ").map(|x| x.split("=").skip(1).take(1).collect::<Vec<_>>()[0].parse::<i64>().unwrap()).collect();
+            sensors_beacons.push((
+                    Position{
+                        x: sensor[0],
+                        y: sensor[1],
+                    },
+                    Position{
+                        x: beacon[0],
+                        y: beacon[1],
+                    }
+            ));
         }
     }
 
-    return 0;
+    let mut ranges: Vec<Range> = Vec::new();
+    for (sen, bec) in sensors_beacons.iter() {
+        println!("Sensor: {:?} Beacon: {:?}", sen, bec);
+        if let Some(r) = overal_at_row(sen, bec, &row) {
+            ranges.push(r);
+        }
+    }
+
+    let mut total = 0;
+    for r in ranges.iter() {
+        println!("Range: {:?}", r);
+        total = total + r.end - r.start;
+    }
+
+    return total.try_into().unwrap();
 }
 
 fn main() -> io::Result<()> {
