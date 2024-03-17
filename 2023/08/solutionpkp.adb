@@ -108,15 +108,174 @@ package body solutionpkp is
 		end loop;
 		statemachine_proc(To_Unbounded_String(Slice(capture,idxl,Length(capture))));
 	end line_proc;
+
+
+	type IterIndex is record
+		Iterations: Integer;
+		Index: Integer;
+	end record;
+
+	Function "=" (Left, Right: In IterIndex) return boolean
+	is
+	begin
+		return Left.Iterations = Right.Iterations and Left.Index = Right.Index;
+	end "=";
+		
+
+	package IterIndexVector is new
+		Ada.Containers.Vectors
+			(Index_Type => Natural,
+			Element_Type => IterIndex
+			);
+
+	Function "=" (Left, Right: In IterIndexVector.Vector) return boolean
+	is
+		res : boolean := False;
+	begin
+		if Left.First_Index = Right.First_Index and Left.Last_Index = Right.Last_Index then
+			res := True;
+			for I in Left.First_Index .. Left.Last_Index loop
+				if Left(I) /= Right(I) then
+					res := False;
+				end if;
+			end loop;
+		end if;
+		return res;
+	end "=";
+
+	package IterIndexVectorVector is new
+		Ada.Containers.Vectors
+			(Index_Type => Natural,
+			Element_Type => IterIndexVector.Vector
+			);
+
+	function NextStep(
+		start: Unbounded_String;
+		operation: Character)
+		return Unbounded_String
+	is
+		next: Unbounded_String := To_Unbounded_String("");
+	begin
+		--Put_Line("Operation: " & operation);
+		case operation is 
+			when 'L' => next := NodeMap.Element(all_nodes, start).Left;
+			when 'R' => next := NodeMap.Element(all_nodes, start).Right;
+			when others => Put_Line("Failuroso");
+		end case;
+		return next;
+	end NextStep;
+
+	function IIV_Logic(
+		iiv : in out IterIndexVector.Vector;
+		iterations : Integer;
+		current_idx : Integer
+		) return Boolean
+	is
+		ii : IterIndex;
+		res : boolean := False;
+	begin
+		ii.iterations := iterations;
+		ii.index := current_idx;
+		if not IterIndexVector.Contains(iiv, ii) then
+			iiv.append(ii);
+			res := True;
+		else
+			Put_Line("Same internal?!?!? Iterations: " & Iterations'Image & " idx: " & current_idx'Image);
+		end if;
+		return res;
+	end IIV_Logic;
+
+
+	function Vectorize(start: Unbounded_String) return IterIndexVector.Vector
+	is
+		iterAcum : IterIndexVector.Vector;
+		continue : Boolean := True;
+		current_node : Unbounded_String := start;
+		total : Integer;
+		current_idx : Natural;
+	begin
+		current_idx := 1;
+		while continue loop
+			total := 0;
+			while Element(current_node, Length(current_node)) /= 'Z' loop
+				--Put_Line("Current_node: " & To_String(current_node));
+				while current_idx <= Length(command_string) loop
+					current_node := NextStep(current_node, Element(command_string, current_idx));
+					total := total + 1;
+					--Put_Line("Current_node: " & To_String(current_node));
+					if Element(current_node, Length(current_node)) = 'Z' then
+						Put_Line("Found!");
+						if not IIV_Logic(iterAcum, total, current_idx) then
+							continue := False;
+							exit;
+						else
+							current_idx := current_idx + 1;
+							if current_idx > Length(command_string) then
+								current_idx := 1;
+							end if;
+							total := 1;
+							current_node := NextStep(current_node, Element(command_string, current_idx));
+						end if;
+					end if;
+					current_idx := current_idx + 1;
+				end loop;
+				current_idx := 1;
+			end loop;
+			if continue then
+				if not IIV_Logic(iterAcum, total, current_idx) then
+					continue := False;
+					exit;
+				else
+					current_idx := current_idx + 1;
+					if current_idx > Length(command_string) then
+						current_idx := 1;
+					end if;
+					total := 1;
+					current_node := NextStep(current_node, Element(command_string, current_idx));
+				end if;
+			end if;
+		end loop;
+		return iterAcum;
+	end Vectorize;
+
+
+	-- Euclidean algorithm
+	function gcd(l,x: Long_Integer) return Long_Integer
+	is
+		a : Long_Integer := l;
+		b : Long_Integer := x;
+		q, r : Long_Integer := 1;
+	begin
+		while r > 0 loop
+			q := a/b;
+			r := (a rem b);
+			a := b;
+			b := r;
+		end loop;
+		return q;
+	end gcd;
+
+	function lcm(a,b: Long_Integer) return Long_Integer
+	is
+		temp : Long_Integer;
+	begin
+		temp := a * b;
+		return temp / gcd(a, b);
+	end lcm;
+
+
+
 	procedure Main is
 		F         : File_Type;
 		File_Name : constant String := "input.txt";
 		str       : Unbounded_String;
 		total : Integer := 0;
-		all_locations : LocationVector.Vector;
 		continue : Boolean := True;
 		current : Unbounded_String;
 		next_step : Unbounded_String;
+		all_locations : LocationVector.Vector;
+		all_steps : IterIndexVectorVector.Vector;
+		lcmv : Long_Integer := 0;
 	begin
 		Open (F, In_File, File_Name);
 		state := command;
@@ -138,36 +297,16 @@ package body solutionpkp is
 				LocationVector.append(all_locations, N.Self);
 			end if;
 		end loop;
-		
-		while continue loop
-			for I in 1 .. Length(command_string) loop
-				--Put_Line("new loop!");
-				continue := False;
-				for J in all_locations.first_index .. all_locations.last_index loop
-					current := all_locations(J);
-					case Element(command_string, I) is 
-						when 'L' => next_step := NodeMap.Element(all_nodes, current).Left;
-						when 'R' => next_step := NodeMap.Element(all_nodes, current).Right;
-						when others => Put_Line("Failuroso");
-					end case;
-					--Put_Line("Origin: " & To_String(current) & " Destination: " & To_String(next_step));
-					all_locations(J) := next_step;
-					if Element(next_step, Length(next_step)) /= 'Z' then
-						continue := True;
-					end if;
-				end loop;
-				total := total + 1;
-				if not continue then
-					Put_Line("All Found!");
-					exit;
-				end if;
-				if total mod 10000 = 0 then
-					Put_Line("Iterations: " & total'image);
-				end if;
+
+		Put_Line("Post procesing");
+		for S of all_locations loop
+			all_steps.append(Vectorize(S));
+			Put_Line("Iterations of: " & To_String(S));
+			for II of IterIndexVectorVector.Last_element(all_steps) loop
+				Put_Line("Iterations: " & II.Iterations'Image & " Idx: " & II.Index'Image);
 			end loop;
 		end loop;
-
-		Put_Line("Total: " & total'Image);
+		
 		Close (F);
 	end Main;
 end solutionpkp;
