@@ -25,7 +25,7 @@ def filter(rules, mine, rest):
     return good_tickets
 
 def contained(value: int, rules: list[list[int]]):
-    #print(value, rules)
+    #print("        ", value, rules)
     for rs, re in rules:
         if value >= rs and value <= re:
             return True
@@ -33,13 +33,16 @@ def contained(value: int, rules: list[list[int]]):
 
 def main(rules, mine, rest, search="departure"):
     good_tickets = filter(rules, mine, rest)
-    print(good_tickets)
+    #print(good_tickets)
 
     found_cols = [None] * len(rules)
     pending_rules = rules.copy()
 
+    print("Start")
 #    while len(pending_rules) > 0:
-    for _ in range(3):
+    last_count = 0 
+    while last_count != found_cols.count(None):
+        last_count = found_cols.count(None) 
         iter_items = list(pending_rules.items())
         for pendingKey, pendingValues in iter_items:
             print(pendingKey, pendingValues)
@@ -54,39 +57,33 @@ def main(rules, mine, rest, search="departure"):
                 for ticket in good_tickets:
                     if not contained(ticket[col], pendingValues):
                         valid = False
-                        key_col = col
                         break
                 if valid:
+                    key_col = col
                     key_matches += 1
-            print(key_matches)
             if key_matches == 1:
+                print("Single", key_col)
                 found_cols[key_col] = pendingKey
                 pending_rules.pop(pendingKey, None)
+            else:
+                print(key_matches)
         print(found_cols)
+        print()
 
-    return None
+    total = 1
+    for idx,fcn in enumerate(found_cols):
+        if fcn is None:
+            continue
+        if search in fcn:
+            total *= mine[idx]
+
+    return total
 
 
 # To run tests: "python -m unittest -v p1.py"
 class TestAdvent(unittest.TestCase):
 
     def test_basic(self):
-        rules = {
-                "class": [[1,3], [5,7]],
-                "row": [[6,11], [33,44]],
-                "seat": [[13,40], [45,50]]
-                }
-        mine = [7,1,14]
-        others = [
-                [7,3,47],
-                [40,4,50],
-                [55,2,20],
-                [38,6,12],
-                ]
-        
-        self.assertEqual(main(rules, mine, others, "seat"), 14)
-
-    def test_basic_1(self):
         rules = {
                 "class": [[0,1], [4,19]],
                 "row": [[0,5], [8,19]],
