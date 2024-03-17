@@ -88,6 +88,22 @@ package body solutionpk is
 		Put_Line("");
 	end;
 
+	function CloneGridZero(ivv : IntegerVectorVector.Vector) return IntegerVectorVector.Vector
+       	is
+		nivv : IntegerVectorVector.Vector;
+		tiv : IntegerVector_Access;
+	begin
+		nivv.clear;
+		for iv of ivv loop
+			tiv := new IntegerVector.Vector;
+			for I in 0 .. IntegerVector.Length(iv.all)-1 loop
+				tiv.append(0);
+			end loop;
+			nivv.append(tiv);
+		end loop;
+		return nivv;
+	end;
+
 	function process_line(str: Unbounded_String) return IntegerVector_Access
 	is
 		iv : IntegerVector_Access := new IntegerVector.Vector;
@@ -98,46 +114,87 @@ package body solutionpk is
 		return iv;
 	end;
 
+	procedure calculateVal(grid_val: IntegerVectorVector.Vector ; grid_totals : in out IntegerVectorVector.Vector ; l: Location)
+	is
+		LIMIT_STRAIGHT : constant Integer := 4;
+		line_sum : Integer;
+		vrow, vcol : Boolean := True;
+		col_val, row_val : Integer;
+		next_val : Integer;
+	begin
+		if l.row >= LIMIT_STRAIGHT then
+			line_sum := 0;
+			for I in 0 .. l.row -1 loop
+				line_sum := line_sum + grid_val(I)(l.col);
+			end loop;
+			if line_sum = grid_totals(l.row-1)(l.col) then
+				vrow := False;
+				Put_Line("Straight rows");
+			end if;
+		end if;
+		if l.col >= LIMIT_STRAIGHT then
+			line_sum := 0;
+			for I in 0 .. l.col -1 loop
+				line_sum := line_sum + grid_val(l.row)(I);
+			end loop;
+			if line_sum = grid_totals(l.row)(l.col-1) then
+				vcol := False;
+				Put_Line("Straight cols");
+			end if;
+		end if;
+		col_val := grid_totals(l.row)(l.col-1);
+		row_val := grid_totals(l.row-1)(l.col);
+		if vcol and vrow then
+			if col_val < row_val then
+				vrow := False;
+			else
+				vcol := False;
+			end if;
+		end if;
+		if vcol then
+			next_val := col_val + grid_val(l.row)(l.col);
+		elsif vrow then
+			next_val := row_val + grid_val(l.row)(l.col);
+		else
+			next_val := 99999;
+			Put_Line("Absolute Fuck!");
+		end if;
+		grid_totals(l.row)(l.col) := next_val;
+	end;
+
 
 	best_val : Integer := Integer'Last; 
 	traveled : LocationSet.Set;
-	function BestRoute(grid: IntegerVectorVector.Vector ; l: Location; acum: Integer := 0) return Integer
+	function BestRoute(grid: IntegerVectorVector.Vector ) return Integer
 	is
-		best : Integer := Integer'Last;
-		current : Integer;
-		maxr : Integer := Integer(Length(grid)-1);
-		maxc : Integer := Integer(Length(grid(0).all)-1);
-		nl : Location_Access;
+		calc_grid : IntegerVectorVector.Vector;
+		row_limit : Integer;
+		l : Location;
 	begin
-		nl := new Location;
-		--Put_Line("Row: " & l.row'Image & " col: " & l.col'Image);
-		if Length(traveled) > 144 then
-			Put_Line("Shit!");
-		end if;
-		if acum > best_val then
-			return best;
-		end if;
-		if l.row = maxr and l.col = maxc then
-			Put_Line("End: " & acum'Image);
-			best := acum;
-			if best < best_val then
-				best_val := best;
-			end if;
-		else
-			for d in Direction loop
-				nl.all := Step(l, d);
-				if LocationValid(0,0,maxr,maxc,nl.all) and not Contains(traveled, nl) then
-					traveled.Insert(nl);
-					current := BestRoute(grid, nl.all, acum + grid(l.row).all(l.col));
-					if current < best then
-						best := current;
-					end if;
-					traveled.Delete(nl);
-				end if;
+		calc_grid := CloneGridZero(grid);
+		calc_grid(0)(0) := grid(0)(0);
+		Put_Line("Initial grid");
+		PrintGrid(calc_grid);
+		row_limit := Integer(Length(calc_grid)-1);
+		for I in 1 .. row_limit loop
+			for idx in 0 .. I loop
+				l.row := idx;
+				l.col := I-idx;
+				calc_grid(l.row)(l.col) := I;
 			end loop;
-		end if;
-		FreeLocation(nl);
-		return best;
+		end loop;
+		Put_Line("Inter grid");
+		PrintGrid(calc_grid);
+		for I in reverse 1 .. Integer(Length(calc_grid(0).all)-1) loop
+			for idx in 0 .. row_limit - I loop
+				l.row := row_limit - idx;
+				l.col := I+idx;
+				calc_grid(l.row)(l.col) := row_limit + I;
+			end loop;
+		end loop;
+		Put_Line("Final grid");
+		PrintGrid(calc_grid);
+		return calc_grid(Integer(Length(calc_grid)-1))(Integer(Length(calc_grid(0).all)-1));
 	end;
 
 
@@ -147,7 +204,6 @@ package body solutionpk is
 		str       : Unbounded_String;
 		grid      : IntegerVectorVector.Vector;
 		total     : Integer;
-		l : Location;
 	begin
 		Open (F, In_File, File_Name);
 		while not End_Of_File (F) loop
@@ -160,9 +216,7 @@ package body solutionpk is
 
 		Put_Line("Input: ");
 		PrintGrid(grid);
-		l.col := 0;
-		l.row := 0;
-		total := BestRoute(grid, l);
+		total := BestRoute(grid);
 		Put_Line("Total: " & total'Image);
 	end Main;
 end solutionpk;
