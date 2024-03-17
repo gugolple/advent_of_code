@@ -1,9 +1,11 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
 with Ada.Strings.Maps; use Ada.Strings.Maps;
+with Ada.Strings.Unbounded.Hash;
 
 with Ada.Containers; use Ada.Containers;
 with Ada.Containers.Vectors;
+with Ada.Containers.Hashed_Maps;
 
 with solutionpkp; use solutionpkp;
 
@@ -14,6 +16,15 @@ package body solutionpkp is
 			Element_Type => Integer 
 			);
 	use IntegerVector;
+
+	type Unbounded_String_Access is access Unbounded_String;
+	package StrToCount is new
+		Ada.Containers.Hashed_Maps
+			( Key_Type => Unbounded_String,
+			Element_Type => long_integer,
+			Hash => Hash,
+			Equivalent_Keys => "=");
+	use StrToCount;
 
 	state: StateMachine;
 	
@@ -71,18 +82,15 @@ package body solutionpkp is
 	end line_proc;
 
 
-	count_pos : long_integer := 0;
-	total : long_integer := 0;
-	procedure CheckValid is
+	function CheckValid(str: Unbounded_String) return boolean is
 		beg, fin, tfin : Integer := 1;
 		Broken : constant Character_Set := To_Set("#");
 		Working : constant Character_Set := To_Set(".");
 		valid : Boolean := True;
 	begin
-		total := total + 1;
 		for L of values loop
 			beg := Index(
-				Source => process_line,
+				Source => str,
 				Set => Broken,
 				From => fin
 				);
@@ -91,13 +99,13 @@ package body solutionpkp is
 				exit;
 			end if;
 			fin := Index(
-				Source => process_line,
+				Source => str,
 				Set => Working,
 				From => beg
 				);
 			if fin = 0 then
 				tfin := fin;
-				fin := Length(process_line)+1;
+				fin := Length(str)+1;
 			end if;
 			--Put_Line("F: " & Fin'Image & "B: " & Beg'Image);
 			if fin-beg /= L then
@@ -107,7 +115,7 @@ package body solutionpkp is
 		end loop;
 		if valid and tfin /= 0 then
 			beg := Index(
-				Source => process_line,
+				Source => str,
 				Set => Broken,
 				From => fin
 				);
@@ -115,85 +123,50 @@ package body solutionpkp is
 				valid := false;
 			end if;
 		end if;
+		Put_Line("RecursedLine: " & To_String(str) & " Valid: " & Valid'Image);
 		if valid then
-			Put_Line("Resul: " & To_String(process_line) & " Valid: " & Valid'Image);
-			count_pos := count_pos + 1;
+			Put_Line("RecursedLine: " & To_String(str) & " Valid: " & Valid'Image);
 		end if;
+		return valid;
 	end CheckValid;
 
-	procedure RecurseSolution(position_values: Integer := 0; position_string: Integer := 1) is
+	dp : StrToCount.Map;
+	function RecurseSolution(str:in out Unbounded_String; pos : Integer := 1) return long_integer is
+		curr : long_integer := 0;
+		total : long_integer := 0;
 		idx : Integer;
-		idx_end : Integer;
-		length : Integer;
-		Broken : constant Character_Set := To_Set("#?");
-		Working :  constant Character_Set := To_Set(".?");
-		brokenslice : Unbounded_String;
-		workingslice : Unbounded_String;
+		Search_Set : constant Character_Set := To_Set("?");
+		Mslice : Unbounded_String;
+		tstr : Unbounded_String_Access;
 	begin
-		if position_values = Integer(IntegerVector.Length(values)) then
-			Put_Line("Resul: " & To_String(process_line));
-			count_pos := count_pos + 1;
-			return;
+		mslice := To_Unbounded_String(Slice(str, pos, Length(str)));
+		Put_Line("Pos: " & pos'Image & " slice: " & To_String(mslice) & " str: " & To_string(str));
+		if Contains(dp, mslice) then
+			return Element(dp, mslice);
 		end if;
-		if position_string > 1 then
-			if Element(process_line, position_string-1) = '#' then
-				Put_Line("Bad");
-				return;
+		idx := Index(
+			Source => str,
+			Set => Search_Set,
+			From => 1
+			);
+		if idx = 0 then
+			if CheckValid(mslice) then
+				return 1;
+			end if;
+		else
+			overwrite(str, idx, ".");
+			curr := RecurseSolution(str, idx);
+			total := total + curr;
+			overwrite(str, idx, "#");
+			curr := RecurseSolution(str, idx);
+			total := total + curr;
+			overwrite(str, idx, "?");
+			if not Contains(dp, mslice) and total > 0 then
+				Insert(dp, mslice, total);
 			end if;
 		end if;
-		Put_Line("Currn: " & To_String(process_line) & " pv: " & position_values'Image);
-		Length := values(position_values);
-		idx := position_string;
-		idx_end := idx;
-		-- Search start
-		while idx /= 0 loop
-			Put_Line("B: " & idx'Image & " F: " & idx_end'Image & " D: " & position_values'Image);
-			idx := Index(
-				Source => process_line,
-				Set => Broken,
-				From => idx 
-				);
-			if idx = 0 then
-				return;
-			end if;
-			-- Search end
-			idx_end := idx;
-			while idx_end /= 0 and (idx_end - idx) < Length loop
-				idx_end := Index(
-					Source => process_line,
-					Set => Working,
-					From => idx_end + 1 
-					);
-			end loop;
-			if idx_end = 0 then
-				idx_end := Integer(Ada.Strings.Unbounded.Length(process_line));
-			end if;
-			if (idx_end - idx) > Length then
-				Put_Line("Too long");
-			else
-				Put_Line("B: " & idx'Image & " F: " & idx_end'Image & " D: " & position_values'Image);
-				if idx_end + 1 < Integer(Ada.Strings.Unbounded.Length(process_line)) then
-					idx_end := idx_end + 1;
-				end if;
-				-- All good, then replace
-				workingslice := Unbounded_Slice(process_line, position_string, idx);
-				for I in idx .. idx_end loop
-					Overwrite(process_line, I, ".");
-				end loop;
-				brokenslice := Unbounded_Slice(process_line, idx, idx_end);
-				for I in idx .. idx_end loop
-					Overwrite(process_line, I, "#");
-				end loop;
-				-- Set the last one to a working to break the continuos strinng
-				Overwrite(process_line, idx_end-1, ".");
-				RecurseSolution(position_values + 1, idx_end);
-				Replace_Slice(process_line, position_string, idx, To_String(workingslice));
-				Replace_Slice(process_line, idx, idx_end, To_String(brokenslice));
-				Put_Line("B: " & idx'Image & " F: " & idx_end'Image & " D: " & position_values'Image);
-				Put_Line("Currn: " & To_String(process_line) & " pv: " & position_values'Image);
-			end if;
-			idx := idx + 1;
-		end loop;
+		Put_Line("R total: " & total'Image);
+		return total;
 	end RecurseSolution;
 
 
@@ -202,6 +175,8 @@ package body solutionpkp is
 		File_Name : constant String := "input.txt";
 		str       : Unbounded_String;
 		tmp       : IntegerVector.Vector;
+		count_pos : long_integer := 0;
+		total     : long_integer := 0;
 	begin
 		Open (F, In_File, File_Name);
 		while not End_Of_File (F) loop
@@ -234,10 +209,11 @@ package body solutionpkp is
 			end loop;
 			Put_Line("");
 
-			RecurseSolution;
+			count_pos := 0;
+			count_pos := RecurseSolution(process_line);
 
 			Put_Line("CountPos: " & Count_Pos'Image);
-			Put_Line("Total: " & Total'Image);
+			total := total + Count_Pos;
 		end loop;
 		Put_Line("CountPos: " & Count_Pos'Image);
 		Put_Line("Total: " & Total'Image);
