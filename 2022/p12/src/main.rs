@@ -3,8 +3,9 @@ use std::io::prelude::*;
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
+use std::collections::HashSet;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 struct Position {
     pos_row: usize,
     pos_col: usize,
@@ -22,7 +23,7 @@ impl Ord for DijkstraElem {
         // In case of a tie we compare positions - this step is necessary
         // to make implementations of `PartialEq` and `Ord` consistent.
         other.cost.cmp(&self.cost)
-            .then_with(|| self.pos_row.cmp(&other.pos_row).then_with(|| self.pos_col.cmp(&other.pos_col)))
+            .then_with(|| self.pos.pos_row.cmp(&other.pos.pos_row).then_with(|| self.pos.pos_col.cmp(&other.pos.pos_col)))
     }
 }
 
@@ -34,7 +35,7 @@ impl PartialOrd for DijkstraElem {
 }
 
 fn indx(grid: &Vec<Vec<char>>, cur_dij: &DijkstraElem) -> char {
-    grid[cur_dij.pos_row][cur_dij.pos_col]
+    grid[cur_dij.pos.pos_row][cur_dij.pos.pos_col]
 }
 
 fn add1_char(c: char) -> char {
@@ -52,47 +53,55 @@ fn valid_step(grid: &Vec<Vec<char>>, cur_dij: &DijkstraElem, next_dij: &Dijkstra
         'a' => org == 'S' || org == dst,
         'E' => org == 'z',
         'S' => false,
-        _ => panic!("Wrong char/not handled!"),
+        _ => panic!("Wrong char/not handled!: {}", dst),
     }
 }
 
 fn calc_next_movs(grid: &Vec<Vec<char>>, cur_dij: &DijkstraElem) -> Vec<DijkstraElem> {
     let mut result: Vec<DijkstraElem> = Vec::new();
-    if cur_dij.pos_row > 0 {
+    if cur_dij.pos.pos_row > 0 {
         let next = DijkstraElem {
             cost: cur_dij.cost + 1,
-            pos_row: cur_dij.pos_row - 1,
-            pos_col: cur_dij.pos_col,
+            pos: Position{
+                pos_row: cur_dij.pos.pos_row - 1,
+                pos_col: cur_dij.pos.pos_col,
+            },
         };
         if valid_step(grid, cur_dij, &next) {
             result.push(next);
         }
     }
-    if cur_dij.pos_row < grid.len()-1 {
+    if cur_dij.pos.pos_row < grid.len()-1 {
         let next = DijkstraElem {
             cost: cur_dij.cost + 1,
-            pos_row: cur_dij.pos_row + 1,
-            pos_col: cur_dij.pos_col,
+            pos: Position{
+                pos_row: cur_dij.pos.pos_row + 1,
+                pos_col: cur_dij.pos.pos_col,
+            },
         };
         if valid_step(grid, cur_dij, &next) {
             result.push(next);
         }
     }
-    if cur_dij.pos_col > 0 {
+    if cur_dij.pos.pos_col > 0 {
         let next = DijkstraElem {
             cost: cur_dij.cost + 1,
-            pos_row: cur_dij.pos_row,
-            pos_col: cur_dij.pos_col - 1,
+            pos: Position{
+                pos_row: cur_dij.pos.pos_row,
+                pos_col: cur_dij.pos.pos_col - 1,
+            },
         };
         if valid_step(grid, cur_dij, &next) {
             result.push(next);
         }
     }
-    if cur_dij.pos_col < grid[cur_dij.pos_row].len()-1 {
+    if cur_dij.pos.pos_col < grid[cur_dij.pos.pos_row].len()-1 {
         let next = DijkstraElem {
             cost: cur_dij.cost + 1,
-            pos_row: cur_dij.pos_row,
-            pos_col: cur_dij.pos_col + 1,
+            pos: Position{
+                pos_row: cur_dij.pos.pos_row,
+                pos_col: cur_dij.pos.pos_col + 1,
+            },
         };
         if valid_step(grid, cur_dij, &next) {
             result.push(next);
@@ -122,14 +131,22 @@ fn process_input(input: &str) -> u64 {
     let mut heap = BinaryHeap::new();
     heap.push(DijkstraElem {
         cost: 0,
-        pos_row: pos_row,
-        pos_col: pos_col,
+        pos: Position {
+            pos_row: pos_row,
+            pos_col: pos_col,
+        },
     }); 
 
+    let mut seen: HashSet<Position> = HashSet::new();
     let mut count_itr = 0;
 
     while let Some(cur_dij) = heap.pop() {
+        if seen.contains(&cur_dij.pos) {
+            continue; 
+        }
+        seen.insert(cur_dij.pos);
         let next_moves = calc_next_movs(&grid, &cur_dij);
+
         println!("Recur: {:?}, next: {}", cur_dij, next_moves.len());
 
         count_itr = count_itr + 1;
