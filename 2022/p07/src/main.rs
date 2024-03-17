@@ -1,127 +1,94 @@
 use std::io;
 use std::io::prelude::*;
-use std::collections::HashMap;
-
+use std::rc::Rc;
+use std::cell::RefCell;
 
 struct FsDesc {
+    parent: Option<Rc<FsDesc>>,
     name: String,
-    size: u64,
-    child: Vec<String>,
-    visited: bool
+    size: RefCell<u64>,
+    children: RefCell<Vec<Rc<FsDesc>>>,
 }
 
-fn recurse_add_size_folders(input: &str, hm: &mut HashMap<String, FsDesc>) {
-    let elem = hm.get(input).expect("Potato!");
-    if elem.visited {
-        return;
-    }
-
-    let mut tot: u64 = 0;
-    for chl in elem.child.clone().iter() {
-        recurse_add_size_folders(chl, hm);
-        let next_child = hm.get(chl).expect("Int Potato!");
-        tot = tot + next_child.size;
-    }
-    let elem = hm.get_mut(input).expect("Potato!");
-    elem.size = tot + elem.size;
-}
-
-fn add_sizes_folders(input: &mut HashMap<String, FsDesc>, thresh: u64) -> u64 {
-    recurse_add_size_folders("root", input);
-
-    let mut tot: u64 = 0;
-    for (key, value) in input {
-        println!("Key: {}, val: {}", key, value.size);
-        if value.size < thresh {
-            tot = tot + value.size;
+fn recurse_set_sizes(root: Rc<FsDesc>, thresh: u64) -> u64{
+    let mut recurse_size = 0;
+    let mut tot_size: u64 = 0;
+    println!("Dir name: {}", root.name);
+    for child in &*root.children.borrow() {
+        if child.children.borrow().len() == 0 {
+            println!("File {} {}", child.name, child.size.borrow());
+            tot_size = tot_size + *child.size.borrow();
+        } else {
+            let temp_recurse_size = recurse_set_sizes(child.clone(), thresh);
+            // Add the recursion to OUR OWN size
+            tot_size = tot_size + temp_recurse_size;
+            // Keep the recursion size
+            recurse_size = recurse_size + temp_recurse_size;
+            println!("Back at dir {}", root.name);
         }
     }
-    return tot;
+    println!("Res dir name: {} size: {}", root.name, tot_size);
+    if tot_size < thresh {
+        recurse_size = recurse_size + tot_size;
+    }
+    *root.size.borrow_mut() = tot_size;
+    return recurse_size;
 }
 
 fn process_input(input: &str) -> u64 {
-    let mut path: Vec<String> = Vec::new();
-    let mut folder_tree: HashMap<String, FsDesc> = HashMap::new();
-    let mut folder_size: u64 = 0;
-    let mut fold_name = "root".to_string();
-    let mut fold_children: Vec<FsDesc> = Vec::new();
+    let root: Rc<FsDesc> =  Rc::new(FsDesc{
+        parent: None,
+        name: "root".to_string(),
+        size: 0.into(),
+        children: Vec::new().into(),
+    });
+    let mut current: Rc<FsDesc> = Rc::clone(&root);
     for line in input.split("\n") {
         if line != "" {
-            //println!("");
-            //println!("Line!: {}", line);
-            //println!("Path!: {:?}", path);
+            println!("Line!: {}", line);
             let parts: Vec<_> = line.split(" ").collect();
             if parts[0] == "$" {
                 match parts[1] {
                     "cd" => {
-                        println!("Path: {}", &path.join("/"));
-                        if parts[2] != ".." || folder_size>0 {
-                            folder_tree.insert(
-                                path.join("/"),
-                                FsDesc {
-                                    name: fold_name.clone(),
-                                    size: folder_size,
-                                    child: Vec::new(),
-                                    visited: false
-                                });
-                            if path.len() > 1 {
-                                println!("paatthh {:?} {}", path, &path.split_last().unwrap().1.join("/"));
-                                let tfs = folder_tree.get_mut(&path.split_last().unwrap().1.join("/"));
-                                tfs.unwrap().child.push(path.join("/"));
+                        // If we are not going up the tree
+                        if parts[2] != ".." && parts[2] != "/" {
+                            let next_current = current.children.borrow().iter().find(|x| x.name == parts[2]).expect("It should have been given by the LS").clone();
+                            current = next_current;
+                        } else {
+                            // Not handling the ROOT, special case
+                            if parts[2] != "/" {
+                                current = current.parent.clone().expect("We should always have parent, otherwise I program badly");
                             }
                         }
-                        if parts[2] == "/" {
-                            path.clear();
-                            path.push("root".to_string());
-                        }else {
-
-                            if parts[2] == ".." {
-                                path.pop().expect("Will work, the people are nice");
-                            }else{
-                                path.push(parts[2].to_string());
-                            }
-                        }
-                        fold_name = parts[2].to_string();
-                        folder_size = 0;
                     },
                     "ls" => (),
                     _ => panic!(),
                 }
             } else if parts[0] != "dir" {
-                folder_size = folder_size + parts[0].parse::<u64>().unwrap();
+                let current_size: u64 = parts[0].parse::<u64>().unwrap();
+                Rc::clone(&current).children.borrow_mut().push(
+                    Rc::new(FsDesc{
+                        parent: Some(Rc::clone(&current)),
+                        name: parts[1].to_string(),
+                        size: current_size.into(),
+                        children: Vec::new().into(),
+                }));
             } else {
                 assert_eq!(parts[0],"dir");
-                fold_children.push(FsDesc{
-                    name: parts[1],
-                    size: 0,
-
-                });
+                Rc::clone(&current).children.borrow_mut().push(
+                    Rc::new(FsDesc{
+                        parent: Some(Rc::clone(&current)),
+                        name: parts[1].to_string(),
+                        size: 0.into(),
+                        children: Vec::new().into(),
+                }));
             }
         }
     }
-    if folder_size > 0 {
-        folder_tree.insert(
-            path.join("/"),
-            FsDesc {
-                name: fold_name,
-                size: folder_size,
-                child: Vec::new(),
-                visited: false
-            });
-        if path.len() > 1 {
-            let tfs = folder_tree.get_mut(&path.split_last().unwrap().1.join("/"));
-            tfs.unwrap().child.push(path.join("/"));
-        }
-    }
 
-    for (key, value) in &folder_tree {
-        println!("Key: {}, Name: {}, Size: {}, Cihld: {}", key, value.name, value.size, value.child.len());
-        for chl in &value.child {
-            println!("  Child: {}", chl);
-        }
-    }
-
-    return add_sizes_folders(&mut folder_tree, 100000);
+    println!("");
+    println!("The current tree");
+    return recurse_set_sizes(root.clone(), 100000);
 }
 
 fn main() -> io::Result<()> {
@@ -142,34 +109,6 @@ mod tests {
 
     #[test]
     fn test_advent_basic() {
-        let input = "$ cd /
-$ ls
-dir a
-14848514 b.txt
-8504156 c.dat
-dir d
-$ cd a
-$ ls
-dir e
-29116 f
-2557 g
-62596 h.lst
-$ cd e
-$ ls
-584 i
-$ cd ..
-$ cd ..
-$ cd d
-$ ls
-4060174 j
-8033020 d.log
-5626152 d.ext
-7214296 k";
-        assert_eq!(process_input(input),95437);
-    }
-
-    #[test]
-    fn test_advent_basic1() {
         let input = "$ cd /
 $ ls
 dir a
