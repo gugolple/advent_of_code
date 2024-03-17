@@ -6,7 +6,7 @@ use  Ada.Strings.Unbounded;
 
 procedure solution is
 	F         : File_Type;
-	File_Name : constant String := "basic_input.txt";
+	File_Name : constant String := "input.txt";
 	str       : Unbounded_String;
 	c         : Character;
 	first,last: Integer;
