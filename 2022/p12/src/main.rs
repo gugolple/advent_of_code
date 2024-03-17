@@ -11,10 +11,22 @@ struct Position {
     pos_col: usize,
 }
 
+impl std::fmt::Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Row:{:0>3} Col:{:0>3}", self.pos_row, self.pos_col)
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 struct DijkstraElem {
     cost: u64,
     pos: Position,
+}
+
+impl std::fmt::Display for DijkstraElem {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "DK Cost:{:0>3} Pos({})", self.cost, self.pos)
+    }
 }
 
 impl Ord for DijkstraElem {
@@ -48,9 +60,10 @@ fn valid_step(grid: &Vec<Vec<char>>, cur_dij: &DijkstraElem, next_dij: &Dijkstra
 
     //println!("Cmp src: {} dst: {}", org, dst);
 
+    // Missing to allow falling!
     match dst {
-        'b' ..= 'z' => dst == org || dst == add1_char(org), 
-        'a' => org == 'S' || org == dst,
+        'b' ..= 'z' => dst <= add1_char(org), 
+        'a' => true,
         'E' => org == 'z',
         'S' => false,
         _ => panic!("Wrong char/not handled!: {}", dst),
@@ -147,7 +160,7 @@ fn process_input(input: &str) -> u64 {
         seen.insert(cur_dij.pos);
         let next_moves = calc_next_movs(&grid, &cur_dij);
 
-        println!("Recur: {:?}, next: {}", cur_dij, next_moves.len());
+        println!("Recur: {}, chr: {}, next: {:0>3}", cur_dij, indx(&grid, &cur_dij), next_moves.len());
 
         count_itr = count_itr + 1;
         //if count_itr > 50 {
@@ -163,7 +176,15 @@ fn process_input(input: &str) -> u64 {
         };
     }
 
-    return 0;
+    for pos in &seen {
+        grid[pos.pos_row][pos.pos_col] = '~';
+    }
+
+    for row in &grid {
+        println!("{}",row.iter().collect::<String>());
+    }
+
+    panic!("Path not found! D:");
 }
 
 fn main() -> io::Result<()> {
