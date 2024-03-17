@@ -3,9 +3,9 @@ use std::io::prelude::*;
 use std::cmp::Ordering;
 
 fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
-    println!("Pair test!");
-    println!("Left: {:?}", left);
-    println!("Right: {:?}", right);
+    //println!("Pair test!");
+    //println!("Left: {:?}", left);
+    //println!("Right: {:?}", right);
     let mut lit = left.iter();
     let mut ldepth = 0;
     let mut ldepthcheck = false;
@@ -13,7 +13,7 @@ fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
     let mut rdepth = 0;
     let mut rdepthcheck = false;
 
-    'main_loop: loop {
+    loop {
         let lc = lit.next();
         let rc = rit.next();
 
@@ -31,10 +31,13 @@ fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
             ldepth = ldepth + lstr.matches('[').count();
             rdepth = rdepth + rstr.matches('[').count();
 
-            print!("Depth L: {} -- R: {}", ldepth, rdepth);
+            let ldepthred = lstr.matches(']').count();
+            let rdepthred = rstr.matches(']').count();
 
             let lval = lstr.replace(&['[',']'][..],"").parse::<usize>();
             let rval = rstr.replace(&['[',']'][..],"").parse::<usize>();
+
+            print!("Depth L: {} R: {} ____ Vals L: {:?} R: {:?}", ldepth, rdepth, lval, rval);
 
             if ldepth == rdepth {
                 ldepthcheck = false;
@@ -51,12 +54,19 @@ fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
                     return false;
                 }
             } else {
+
                 if ldepth < rdepth {
+                    if ldepthred == 0 {
+                        return false;
+                    }
                     if ldepthcheck {
                         return true;
                     }
                     ldepthcheck = true;
                 } else {
+                    if rdepthred == 0 {
+                        return true;
+                    }
                     if rdepthcheck {
                         return false;
                     }
@@ -80,9 +90,8 @@ fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
                     }
                 }
             }
-
-            ldepth = ldepth - lstr.matches(']').count();
-            rdepth = rdepth - rstr.matches(']').count();
+            ldepth = ldepth - ldepthred;
+            rdepth = rdepth - rdepthred;
         }
         println!("");
     }
@@ -95,7 +104,7 @@ fn process_input(input: &str) -> u64 {
     let mut right: Vec<&str> = Vec::new();
     for line in input.split("\n") {
         if line != "" {
-            let mut tmp_desc: Vec<&str> = line.split(',').collect();
+            let tmp_desc: Vec<&str> = line.split(',').collect();
             if tmp_desc.len() == 0 {
                 panic!("BAD PARSING!");
             }
@@ -114,8 +123,10 @@ fn process_input(input: &str) -> u64 {
                 println!("");
                 println!("Pair ordered!");
                 result = result + pair_num;
+            } else {
+                println!("");
+                println!("Pair NOT ordered!");
             }
-            println!("");
             left.clear();
             right.clear();
             pair_num = pair_num + 1;
@@ -127,8 +138,10 @@ fn process_input(input: &str) -> u64 {
             println!("");
             println!("Pair ordered!");
             result = result + pair_num;
+        } else {
+            println!("");
+            println!("Pair NOT ordered!");
         }
-        println!("");
     }
 
     return result;
@@ -151,7 +164,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_advent_basicC() {
+    fn test_advent_basic() {
         let input = "[1,1,3,1,1]
 [1,1,5,1,1]
 
@@ -231,6 +244,27 @@ mod tests {
     fn test_advent_basic8() {
         let input = "[1,[2,[3,[4,[5,6,7]]]],8,9]
 [1,[2,[3,[4,[5,6,0]]]],8,9]";
+        assert_eq!(process_input(input),0,"Test has failed");
+    }
+
+    #[test]
+    fn test_advent_basic9() {
+        let input = "[[]]
+[[[]]] ";
+        assert_eq!(process_input(input),1,"Test has failed");
+    }
+
+    #[test]
+    fn test_advent_basicA() {
+        let input = "[1]
+[[2,3]] ";
+        assert_eq!(process_input(input),1,"Test has failed");
+    }
+
+    #[test]
+    fn test_advent_basicB() {
+        let input = "[[2,3]]
+[[[2, 3]],3] ";
         assert_eq!(process_input(input),0,"Test has failed");
     }
 }
