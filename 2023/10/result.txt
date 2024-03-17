@@ -1,0 +1,145 @@
+..F7.
+.FJ|.
+SJ.L7
+|F--J
+LJ...
+Row:  2 Column:  1
+Orig Row:  2 Column:  1 dir: NORTH
+Dest Row:  1 Column:  1 dir: INVALID
+Orig Row:  2 Column:  1 dir: SOUTH
+Dest Row:  3 Column:  1 dir: SOUTH
+Orig Row:  2 Column:  1 dir: EAST
+Dest Row:  2 Column:  2 dir: NORTH
+Orig Row:  2 Column:  1 dir: WEST
+Looped!
+Dest Row:  2 Column:  1 dir: INVALID
+
+Input
+
+Idx  0
+Step is Dir: SOUTH Row:  3 Column:  1
+Orig Row:  3 Column:  1 dir: SOUTH
+Dest Row:  4 Column:  1 dir: EAST
+
+Idx  1
+Step is Dir: NORTH Row:  2 Column:  2
+Orig Row:  2 Column:  2 dir: NORTH
+Dest Row:  1 Column:  2 dir: EAST
+Grid:
+..F7.
+.1J|.
+SJ.L7
+|F--J
+0J...
+
+
+Idx  0
+Step is Dir: EAST Row:  4 Column:  1
+Orig Row:  4 Column:  1 dir: EAST
+Dest Row:  4 Column:  2 dir: NORTH
+
+Idx  1
+Step is Dir: EAST Row:  1 Column:  2
+Orig Row:  1 Column:  2 dir: EAST
+Dest Row:  1 Column:  3 dir: NORTH
+Grid:
+..F7.
+.11|.
+SJ.L7
+|F--J
+00...
+
+
+Idx  0
+Step is Dir: NORTH Row:  4 Column:  2
+Orig Row:  4 Column:  2 dir: NORTH
+Dest Row:  3 Column:  2 dir: EAST
+
+Idx  1
+Step is Dir: NORTH Row:  1 Column:  3
+Orig Row:  1 Column:  3 dir: NORTH
+Dest Row:  0 Column:  3 dir: EAST
+Grid:
+..17.
+.11|.
+SJ.L7
+|0--J
+00...
+
+
+Idx  0
+Step is Dir: EAST Row:  3 Column:  2
+Orig Row:  3 Column:  2 dir: EAST
+Dest Row:  3 Column:  3 dir: EAST
+
+Idx  1
+Step is Dir: EAST Row:  0 Column:  3
+Orig Row:  0 Column:  3 dir: EAST
+Dest Row:  0 Column:  4 dir: SOUTH
+Grid:
+..11.
+.11|.
+SJ.L7
+|00-J
+00...
+
+
+Idx  0
+Step is Dir: EAST Row:  3 Column:  3
+Orig Row:  3 Column:  3 dir: EAST
+Dest Row:  3 Column:  4 dir: EAST
+
+Idx  1
+Step is Dir: SOUTH Row:  0 Column:  4
+Orig Row:  0 Column:  4 dir: SOUTH
+Dest Row:  1 Column:  4 dir: SOUTH
+Grid:
+..11.
+.111.
+SJ.L7
+|000J
+00...
+
+
+Idx  0
+Step is Dir: EAST Row:  3 Column:  4
+Orig Row:  3 Column:  4 dir: EAST
+Dest Row:  3 Column:  5 dir: NORTH
+
+Idx  1
+Step is Dir: SOUTH Row:  1 Column:  4
+Orig Row:  1 Column:  4 dir: SOUTH
+Dest Row:  2 Column:  4 dir: EAST
+Grid:
+..11.
+.111.
+SJ.17
+|0000
+00...
+
+
+Idx  0
+Step is Dir: NORTH Row:  3 Column:  5
+Orig Row:  3 Column:  5 dir: NORTH
+Dest Row:  2 Column:  5 dir: WEST
+
+Idx  1
+Step is Dir: EAST Row:  2 Column:  4
+Orig Row:  2 Column:  4 dir: EAST
+Dest Row:  2 Column:  5 dir: SOUTH
+Grid:
+..11.
+.111.
+SJ.11
+|0000
+00...
+
+Solution!
+Grid:
+..11.
+.111.
+SJ.11
+|0000
+00...
+
+Result:  8
