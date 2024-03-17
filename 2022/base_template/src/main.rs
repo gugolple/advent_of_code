@@ -1,13 +1,19 @@
 use std::io;
 use std::io::prelude::*;
 
-
-fn process_input(input: &str) -> u64 {
+fn input_to_coll(input: &str) -> Vec<String> {
+    let mut res: Vec<String> = Vec::new();
     for line in input.split("\n") {
         if line != "" {
             println!("Line!: {}", line);
+            res.push(line.to_string());
         }
     }
+    return res;
+}
+
+fn process_input(input: &str) -> u64 {
+    let coll = input_to_coll(input);
 
     return 0;
 }
@@ -21,7 +27,6 @@ fn main() -> io::Result<()> {
 
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
