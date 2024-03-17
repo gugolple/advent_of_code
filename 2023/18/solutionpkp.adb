@@ -163,6 +163,7 @@ package body solutionpkp is
             end loop;
             Put_Line("Boundries: " & boundries'Image);
 
+            -- Shoelace theorem to get the area
             lvl := Integer(Length(lv)-1);
             for I in 0 .. lvl loop
                 area := area + lv(I).row * (lv((I-1) mod lvl).col - lv((I+1) mod lvl).col);
@@ -170,8 +171,10 @@ package body solutionpkp is
             area := abs(area)/2;
             Put_Line("Area: " & area'Image);
 
+            -- With pickle's theorem we know interior area is the following.
             interior := area - boundries / 2 + 1;
             Put_Line("Interior: " & interior'Image);
+            -- And with that we know that interior area + boundries is wanted area
             total := interior + boundries;
             Put_Line("Total: " & total'Image);
         end;
