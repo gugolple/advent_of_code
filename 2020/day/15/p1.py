@@ -3,34 +3,34 @@ import sys, itertools, unittest
 
 
 def main(rows, iters=2020):
-    most_recent = dict()
+    mem = dict()
     # Basic answer, just the numbers
     if iters <= len(rows):
         return rows[iters-1]
 
     # Initialize
     for i, cn in enumerate(rows):
-        most_recent[cn] = (-1, i)
-    last_spoken = rows[-1]
+        mem[cn] = (-1, i+1)
+    last = rows[-1]
 
     # Logic
-    for i in range(len(rows), iters):
-        if(last_spoken not in most_recent):
-            last_spoken = 0
-            most_recent[last_spoken] = (-1, i)
-        elif(most_recent[last_spoken][0] == -1):
-            last_spoken = 0
-            if last_spoken not in most_recent:
-                most_recent[last_spoken] = (-1, i)
+    for i in range(len(rows)+1, iters+1):
+        if(last not in mem):
+            last = 0
+            mem[last] = (-1, i)
+        elif(mem[last][0] == -1):
+            last = 0
+            if last not in mem:
+                mem[last] = (-1, i)
             else:
-                most_recent[last_spoken] = (most_recent[last_spoken][1], i)
+                mem[last] = (mem[last][1], i)
         else:
-            last_spoken = most_recent[last_spoken][1] - most_recent[last_spoken][0]
-            if last_spoken not in most_recent:
-                most_recent[last_spoken] = (-1, i)
+            last = mem[last][1] - mem[last][0]
+            if last not in mem:
+                mem[last] = (-1, i)
             else:
-                most_recent[last_spoken] = (most_recent[last_spoken][1], i)
-    return last_spoken
+                mem[last] = (mem[last][1], i)
+    return last
 
 
 # To run tests: "python -m unittest -v p1.py"
@@ -82,4 +82,4 @@ class TestAdvent(unittest.TestCase):
 if __name__ == "__main__":
     rows = sys.stdin.read().strip().split("\n")[0].split(',')
 
-    print(main(rows))
+    print(main(rows, 2022))
