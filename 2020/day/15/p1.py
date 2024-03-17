@@ -4,37 +4,32 @@ import sys, itertools, unittest
 
 def main(rows, iters=2020):
     most_recent = dict()
-    secm_recent = dict()
     # Basic answer, just the numbers
     if iters <= len(rows):
         return rows[iters-1]
 
     # Initialize
     for i, cn in enumerate(rows):
-        most_recent[cn] = i
+        most_recent[cn] = (-1, i)
     last_spoken = rows[-1]
 
     # Logic
     for i in range(len(rows), iters):
-        # Reached target, can remove?
-        if i == iters:
-            break
-        # Initial value
-        nn = None
-        # If seen previously
-        if last_spoken in secm_recent:
-            nn = i -most_recent[last_spoken]
-            secm_recent[last_spoken] = most_recent[last_spoken]
-        # If just seen once
-        elif last_spoken in most_recent:
-            secm_recent[last_spoken] = most_recent[last_spoken]
-            nn = i -most_recent[last_spoken] -1
+        if(last_spoken not in most_recent):
+            last_spoken = 0
+            most_recent[last_spoken] = (-1, i)
+        elif(most_recent[last_spoken][0] == -1):
+            last_spoken = 0
+            if last_spoken not in most_recent:
+                most_recent[last_spoken] = (-1, i)
+            else:
+                most_recent[last_spoken] = (most_recent[last_spoken][1], i)
         else:
-            # New number
-            nn = 0
-        most_recent[last_spoken] = i
-        #print(i, "-->",  nn)
-        last_spoken = nn
+            last_spoken = most_recent[last_spoken][1] - most_recent[last_spoken][0]
+            if last_spoken not in most_recent:
+                most_recent[last_spoken] = (-1, i)
+            else:
+                most_recent[last_spoken] = (most_recent[last_spoken][1], i)
     return last_spoken
 
 
@@ -86,8 +81,5 @@ class TestAdvent(unittest.TestCase):
 
 if __name__ == "__main__":
     rows = sys.stdin.read().strip().split("\n")[0].split(',')
-    for r in rows:
-        print(r)
-    print()
 
-    main(rows)
+    print(main(rows))
