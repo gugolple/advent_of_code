@@ -88,7 +88,8 @@ package body solutionpk is
 		Put_Line("");
 	end;
 
-	function CloneGridZero(ivv : IntegerVectorVector.Vector) return IntegerVectorVector.Vector
+	INVALID_RANGE_START : constant Integer := 100000000;
+	function CloneGrid(ivv : IntegerVectorVector.Vector; val : Integer := INVALID_RANGE_START) return IntegerVectorVector.Vector
        	is
 		nivv : IntegerVectorVector.Vector;
 		tiv : IntegerVector_Access;
@@ -97,7 +98,7 @@ package body solutionpk is
 		for iv of ivv loop
 			tiv := new IntegerVector.Vector;
 			for I in 0 .. IntegerVector.Length(iv.all)-1 loop
-				tiv.append(0);
+				tiv.append(val);
 			end loop;
 			nivv.append(tiv);
 		end loop;
@@ -116,15 +117,21 @@ package body solutionpk is
 
 	procedure calculateVal(grid_val: IntegerVectorVector.Vector ; grid_totals : in out IntegerVectorVector.Vector ; l: Location)
 	is
-		LIMIT_STRAIGHT : constant Integer := 4;
+		LIMIT_STRAIGHT : constant Integer := 3;
 		line_sum : Integer;
 		vrow, vcol : Boolean := True;
 		col_val, row_val : Integer;
 		next_val : Integer;
 	begin
+		if l.row = 0 then
+			vrow := False;
+		end if;
+		if l.col = 0 then
+			vcol := False;
+		end if;
 		if l.row >= LIMIT_STRAIGHT then
-			line_sum := 0;
-			for I in 0 .. l.row -1 loop
+			line_sum := grid_totals(l.row-LIMIT_STRAIGHT)(l.col);
+			for I in l.row -LIMIT_STRAIGHT+1 .. l.row -1 loop
 				line_sum := line_sum + grid_val(I)(l.col);
 			end loop;
 			if line_sum = grid_totals(l.row-1)(l.col) then
@@ -133,8 +140,8 @@ package body solutionpk is
 			end if;
 		end if;
 		if l.col >= LIMIT_STRAIGHT then
-			line_sum := 0;
-			for I in 0 .. l.col -1 loop
+			line_sum := grid_totals(l.row)(l.col-LIMIT_STRAIGHT);
+			for I in l.col -LIMIT_STRAIGHT+1 .. l.col -1 loop
 				line_sum := line_sum + grid_val(l.row)(I);
 			end loop;
 			if line_sum = grid_totals(l.row)(l.col-1) then
@@ -142,9 +149,9 @@ package body solutionpk is
 				Put_Line("Straight cols");
 			end if;
 		end if;
-		col_val := grid_totals(l.row)(l.col-1);
-		row_val := grid_totals(l.row-1)(l.col);
 		if vcol and vrow then
+			col_val := grid_totals(l.row)(l.col-1);
+			row_val := grid_totals(l.row-1)(l.col);
 			if col_val < row_val then
 				vrow := False;
 			else
@@ -152,13 +159,16 @@ package body solutionpk is
 			end if;
 		end if;
 		if vcol then
+			col_val := grid_totals(l.row)(l.col-1);
 			next_val := col_val + grid_val(l.row)(l.col);
 		elsif vrow then
+			row_val := grid_totals(l.row-1)(l.col);
 			next_val := row_val + grid_val(l.row)(l.col);
 		else
-			next_val := 99999;
+			next_val := INVALID_RANGE_START;
 			Put_Line("Absolute Fuck!");
 		end if;
+		Put_Line("Row: " & l.row'Image & " col: " & l.col'Image & " nv: " & next_val'Image & " cv: " & col_val'Image & " rv: " & row_val'Image);
 		grid_totals(l.row)(l.col) := next_val;
 	end;
 
@@ -171,7 +181,7 @@ package body solutionpk is
 		row_limit : Integer;
 		l : Location;
 	begin
-		calc_grid := CloneGridZero(grid);
+		calc_grid := CloneGrid(grid);
 		calc_grid(0)(0) := grid(0)(0);
 		Put_Line("Initial grid");
 		PrintGrid(calc_grid);
@@ -180,16 +190,18 @@ package body solutionpk is
 			for idx in 0 .. I loop
 				l.row := idx;
 				l.col := I-idx;
-				calc_grid(l.row)(l.col) := I;
+				--calc_grid(l.row)(l.col) := I;
+				calculateVal(grid, calc_grid, l);
 			end loop;
 		end loop;
 		Put_Line("Inter grid");
 		PrintGrid(calc_grid);
-		for I in reverse 1 .. Integer(Length(calc_grid(0).all)-1) loop
+		for I in 1 .. Integer(Length(calc_grid(0).all)-1) loop
 			for idx in 0 .. row_limit - I loop
 				l.row := row_limit - idx;
 				l.col := I+idx;
-				calc_grid(l.row)(l.col) := row_limit + I;
+				--calc_grid(l.row)(l.col) := row_limit + I;
+				calculateVal(grid, calc_grid, l);
 			end loop;
 		end loop;
 		Put_Line("Final grid");
@@ -217,6 +229,8 @@ package body solutionpk is
 		Put_Line("Input: ");
 		PrintGrid(grid);
 		total := BestRoute(grid);
+		Put_Line("Input: ");
+		PrintGrid(grid);
 		Put_Line("Total: " & total'Image);
 	end Main;
 end solutionpk;
