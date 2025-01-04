@@ -95,7 +95,7 @@ def entry_func(inp: str, iters=2000):
     monkey_res = [None] * len(monkeys)
     for idx, l in enumerate(monkeys):
         monkey_res[idx] = calc_transitions(ats, int(l), iters)
-    print("Preprocessed")
+    print("Preprocessed", len(ats))
     bsq = 0
     bssq = None
     for seq in ats:
