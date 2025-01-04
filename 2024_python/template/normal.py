@@ -11,6 +11,5 @@ if __name__ == "__main__":
 
 class AllTestCase(unittest.TestCase):
     def test_example(self):
-        inp_str = """
-"""
-        self.assertEqual(entry_func(inp_str), -1)
+        inp_str = """"""
+        self.assertEqual(entry_func(inp_str), )
