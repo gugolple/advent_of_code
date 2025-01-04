@@ -1,11 +1,11 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
 with Ada.Strings.Maps; use Ada.Strings.Maps;
-with Ada.Strings.Unbounded.Hash;
+
+with Ada.Unchecked_Deallocation;
 
 with Ada.Containers; use Ada.Containers;
 with Ada.Containers.Vectors;
-with Ada.Containers.Hashed_Maps;
+with Ada.Containers.Ordered_Maps;
 
 with solutionpkp; use solutionpkp;
 
@@ -16,15 +16,54 @@ package body solutionpkp is
 			Element_Type => Integer 
 			);
 	use IntegerVector;
+	
+	function "<"(Left, Right: IntegerVector.Vector) return Boolean
+	is
+		res : Boolean := false;
+	begin
+		if Length(Left) < Length(Right) then
+			res := True;
+		elsif Length(Left) = Length(Right) then
+			for I in 0 .. Integer(Length(Left)-1) loop
+				if Left(I) < Right(I) then
+					res := True;
+					exit;
+				elsif Left(I) > Right(I) then
+					exit;
+				end if;
+			end loop;
+		end if;
+		return res;
+	end "<";
 
-	type Unbounded_String_Access is access Unbounded_String;
-	package StrToCount is new
-		Ada.Containers.Hashed_Maps
-			( Key_Type => Unbounded_String,
-			Element_Type => long_integer,
-			Hash => Hash,
-			Equivalent_Keys => "=");
-	use StrToCount;
+	type StrNums is record
+		str: Unbounded_String;
+		nums: IntegerVector.Vector;
+	end record;
+	type StrNums_Access is access StrNums;
+
+	procedure Free is new Ada.Unchecked_Deallocation
+	      (Object => StrNums, Name => StrNums_Access);
+
+	package StrNums_AccessVector is new
+		Ada.Containers.Vectors (
+			Index_Type => Natural,
+			Element_Type => StrNums_Access 
+			);
+	
+	function "<"(Left, Right: StrNums_Access) return Boolean
+	is
+	begin
+		return Left.str < Right.str or else (Left.str = Right.str and then Left.nums < Right.nums);
+	end "<";
+
+	use StrNums_AccessVector;
+	package StrNumsMap is new
+		Ada.Containers.Ordered_maps (
+			Key_Type => StrNums_Access,
+			Element_Type => Long_Integer
+			);
+
 
 	state: StateMachine;
 	
@@ -67,7 +106,7 @@ package body solutionpkp is
 			);
 		while idx /= 0 loop
 			-- Process current match
-			Put_Line("Indexs: " & idxl'image & ", " & idx'image);
+			--Put_Line("Indexs: " & idxl'image & ", " & idx'image);
 			-- Next loop preparation
 			statemachine_proc(To_Unbounded_String(Slice(capture,idxl,idx)));
 
@@ -81,102 +120,97 @@ package body solutionpkp is
 		statemachine_proc(To_Unbounded_String(Slice(capture,idxl,Length(capture))));
 	end line_proc;
 
-
-	function CheckValid(str: Unbounded_String) return boolean is
-		beg, fin : Integer := 1;
-		tfin : Integer := 0;
-		Broken : constant Character_Set := To_Set("#?");
-		Working : constant Character_Set := To_Set(".?");
-		valid : Boolean := True;
+	procedure SetStrNums(strnum : in out StrNums; str: Unbounded_String; nums : IntegerVector.Vector)
+	is
 	begin
-		for L of values loop
-			beg := Index(
-				Source => str,
-				Set => Broken,
-				From => fin
-				);
-			if beg = 0 then
-				valid := False;
-				exit;
-			elsif Element(str, beg) = '?' then
-				Put_Line("Early exit beg!");
-				exit;
-			end if;
-			fin := Index(
-				Source => str,
-				Set => Working,
-				From => beg
-				);
-			Put_Line("F: " & Fin'Image & " B: " & Beg'Image);
-			if fin = 0 then
-				tfin := Length(str);
-				fin := Length(str)+1;
-			elsif fin-beg /= L then
-				if fin-beg <= L and then Element(str, fin) = '?' then
-					null;
-					Put_Line("Early exit end!");
-				else
-					valid := False;
-				end if;
-				exit;
-			--Early exit, test only what we can
-			end if;
+		for I in 1 .. Length(str) loop
+			Append(strnum.str, Element(str, I));
 		end loop;
-		if valid and tfin /= 0 then
-			beg := Index(
-				Source => str,
-				Set => Broken,
-				From => fin
-				);
-			if beg /= 0 and then Element(str, beg) /= '?' and then Element(str, tfin) /= '?' then
-				valid := false;
-			end if;
-		end if;
-		Put_Line("RecursedLine: " & To_String(str) & " Valid: " & Valid'Image);
-		return valid;
-	end CheckValid;
+		for I of nums loop
+			Append(strnum.nums, I);
+		end loop;
+	end;
 
-	dp : StrToCount.Map;
-	function RecurseSolution(str:in out Unbounded_String; pos : Integer := 1) return long_integer is
-		curr : long_integer := 0;
-		total : long_integer := 0;
+	mymap : StrNumsMap.Map;
+	storage : StrNums_AccessVector.Vector;
+	function RecurseSolution(str: Unbounded_String; nums: IntegerVector.Vector) return Long_Integer is
+		mystrnum : StrNums_Access;
+		total : Long_Integer := 0;
 		idx : Integer;
-		Search_Set : constant Character_Set := To_Set("?");
-		tstr : Unbounded_String_Access;
+		first_val : Integer;
+		next_nums : IntegerVector.Vector;
+		nstr : Unbounded_String;
 	begin
-		--Put_Line("Pos: " & pos'Image & " str: " & To_string(str));
-		if pos > 1 and then not CheckValid(str) then
-			return total;
-		elsif Contains(dp, str) then
-			total := Element(dp, str);
-			--Put_Line("Known! Val: " &  total'Image);
+		--Put("Str: " & To_String(str) & " nums: ");
+		--for I of nums loop
+		--	Put(I'Image & ",");
+		--end loop;
+		--Put_Line("");
+		mystrnum := new StrNums;
+		SetStrNums(mystrnum.all, str, nums);
+		if StrNumsMap.Contains(mymap, mystrnum) then
+			total := StrNumsMap.Element(mymap, mystrnum);
+			Free(mystrnum);
 			return total;
 		end if;
-		idx := Index(
-			Source => str,
-			Set => Search_Set,
-			From => 1
-			);
-		if idx = 0 then
-			--Put_Line("All valid!");
-			return 1;
-		else
-			overwrite(str, idx, ".");
-			curr := RecurseSolution(str, idx);
-			total := total + curr;
-			overwrite(str, idx, "#");
-			curr := RecurseSolution(str, idx);
-			total := total + curr;
-			overwrite(str, idx, "?");
-			if not Contains(dp, str) and total > 0 then
-				tstr := new Unbounded_String;
-				for I in 1 .. Length(str) loop
-					append(tstr.all, Element(str, I));
-				end loop;
-				Insert(dp, tstr.all, total);
+
+		-- If no more chars
+		if Length(str) = 0 then
+			if Length(nums) = 0 then
+				return 1;
+			end if;
+			return 0;
+		end if;
+
+		-- If no more nums
+		if Length(nums) = 0 then
+			-- No more to worl
+			if Index(str, "#", 1) = 0 then
+				return 1;
+			end if;
+			return 0;
+		end if;
+
+		-- Now recursion
+		-- If we think is blank
+		if Element(str, 1) = '.' or Element(str, 1) = '?' then
+			nstr := To_Unbounded_String("");
+			for I in 2 .. Length(str) loop
+				append(nstr, Element(str,I));
+			end loop;
+			total := total + RecurseSolution(nstr, nums);
+		end if;
+		-- If we think is hit
+		if Element(str, 1) = '#' or Element(str, 1) = '?' then
+			first_val := First_Element(nums);
+			idx := Index(str, ".", 1);
+			if idx = 0 then
+				idx := Length(str) +1;
+			end if;
+			if first_val <= Length(str) and idx > first_val then
+				if Length(str) = first_val or else Element(str, first_val+1) /= '#' then
+					next_nums.clear;
+					for I in 1 .. Integer(Length(nums)-1) loop
+						append(next_nums, Element(nums,I));
+					end loop;
+					nstr := To_Unbounded_String("");
+					for I in first_val+2 .. Length(str) loop
+						append(nstr, Element(str,I));
+					end loop;
+					total := total + RecurseSolution(nstr, next_nums);
+				end if;
 			end if;
 		end if;
-		--Put_Line("R total: " & total'Image);
+
+		storage.append(mystrnum);
+		StrNumsMap.Insert(mymap, mystrnum, total);
+
+		--Put("Str: " & To_String(str) & " nums: ");
+		--for I of nums loop
+		--	Put(I'Image & ",");
+		--end loop;
+		--Put_Line("");
+		--Put_Line("Total: " & total'Image);
 		return total;
 	end RecurseSolution;
 
@@ -185,9 +219,10 @@ package body solutionpkp is
 		F         : File_Type;
 		File_Name : constant String := "input.txt";
 		str       : Unbounded_String;
-		tmp       : IntegerVector.Vector;
-		count_pos : long_integer := 0;
-		total     : long_integer := 0;
+                tmp       : IntegerVector.Vector;
+		total     : Long_Integer := 0;
+		current   : Long_Integer;
+		t: Unbounded_String;
 	begin
 		Open (F, In_File, File_Name);
 		while not End_Of_File (F) loop
@@ -198,36 +233,40 @@ package body solutionpkp is
 			Put_Line(To_String(str));
 			line_proc(str);
 
-			str := process_line;
-			for I in 1..4 loop
-				Append(process_line, To_Unbounded_String("?"));
-				Append(process_line, str);
-			end loop;
+                        str := process_line;
+                        for I in 1..4 loop
+                                Append(process_line, To_Unbounded_String("?"));
+                                Append(process_line, str);
+                        end loop;
+ 
+                        tmp.clear;
+                        for V of values loop
+                                tmp.append(V);
+                        end loop;
+                        for I in 1..4 loop
+                                for V of tmp loop
+                                        values.append(V);
+                                end loop;
+                        end loop;
 
-			tmp.clear;
-			for V of values loop
-				tmp.append(V);
-			end loop;
-			for I in 1..4 loop
-				for V of tmp loop
-					values.append(V);
-				end loop;
-			end loop;
 
-			Put_Line("Input: " & To_String(process_line));
-			for I of values loop
-				Put(I'Image & " ");
+			--Put_Line("Input: " & To_String(process_line));
+			--for I of values loop
+			--	Put(I'Image & " ");
+			--end loop;
+			--Put_Line("");
+
+			for item of storage loop
+				Free(item);
 			end loop;
-			Put_Line("");
+			storage.clear;
+			mymap.clear;
 
-			count_pos := 0;
-			count_pos := RecurseSolution(process_line);
-
-			Put_Line("CountPos: " & Count_Pos'Image);
-			total := total + Count_Pos;
+			current := RecurseSolution(process_line, values);
+			Put_Line(current'Image);
+			total := total + current;
 		end loop;
-		Put_Line("CountPos: " & Count_Pos'Image);
-		Put_Line("Total: " & Total'Image);
 		Close (F);
+		Put_Line("Total: " & total'Image);
 	end Main;
 end solutionpkp;
