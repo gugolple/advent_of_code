@@ -10,27 +10,56 @@ with Ada.Containers.Ordered_Sets;
 with solutionpk; use solutionpk;
 
 package body solutionpk is
-	type Direction is (Down, Right, Up, Left);
+	type Direction is (Down, Right, Up, Left, None);
+	subtype DirectionValid is Direction range Down .. Left;
+
+	function "+"(d: DirectionValid; a: Integer) return DirectionValid is
+		del : Integer;
+	begin
+		del := (DirectionValid'Pos(d) + a) mod (DirectionValid'Size+1);
+		return DirectionValid'Val(del);
+	end;
+
+	function Opposite(d: DirectionValid) return DirectionValid
+	is
+	begin
+		return (case d is
+			when Up => Down,
+			when Left => Right,
+			when Down => Up,
+			When Right => Left);
+	end;
+
 	type Location is record
 		Col : Integer;
 		Row : Integer;
 	end record;
 	type Location_Access is access Location;
-	procedure FreeLocation is new Ada.Unchecked_Deallocation
+	procedure Free is new Ada.Unchecked_Deallocation
 		(Object => Location, Name => Location_Access);
 	type LocationDirection is record
 		loc : Location;
 		dir : Direction;
         end record;
 
-	function "="(Left, Right: Location_Access) return Boolean is
+	function "="(Left, Right: Location) return Boolean is
 	begin
 		return Left.row = Right.Row and Left.col = Right.Col;
 	end;
 
-	function "<"(Left, Right: Location_Access) return Boolean is
+	function "<"(Left, Right: Location) return Boolean is
 	begin
 		return Left.row < Right.Row or (Left.row = Right.row and (Left.col < Right.Col));
+	end;
+
+	function "="(Left, Right: Location_Access) return Boolean is
+	begin
+		return Left.all = Right.all;
+	end;
+
+	function "<"(Left, Right: Location_Access) return Boolean is
+	begin
+		return Left.all < Right.all;
 	end;
 
 	package LocationSet is 
@@ -54,6 +83,49 @@ package body solutionpk is
 			);
 	use IntegerVectorVector;
 
+	-- Dijkstra 
+	type DijkstraStorage is record
+		cost: Integer;
+		l: Location;
+		d: Direction;
+		dirSteps: Natural;
+	end record;
+	type DijkstraStorage_Access is Access DijkstraStorage;
+
+	function "<"(Left, Right: DijkstraStorage) return Boolean is
+		res : Boolean := False;
+	begin
+		if Left.cost < Right.cost then
+			res := True;
+		elsif Left.cost = Right.cost then
+			if Left.l < Right.l then
+				res := True;
+			elsif Left.l = Right.l then
+				if Left.d < Right.d then
+					res := True;
+				elsif Left.d = Right.d then
+					res := Left.dirSteps < Right.dirSteps;
+				end if;
+			end if;
+		end if;
+		return res;
+	end;
+
+	procedure Free is new Ada.Unchecked_Deallocation
+	      (Object => DijkstraStorage, Name => DijkstraStorage_Access);
+
+	function "<"(Left, Right: DijkstraStorage_Access) return Boolean is
+	begin
+		return Left.all < Right.all;
+	end;
+
+	package DijkstraStorageSet is 
+		new Ada.Containers.Ordered_Sets(
+			Element_Type => DijkstraStorage_Access
+			);
+	use DijkstraStorageSet;
+
+	-- Functions
 	function Step(l : Location; d: Direction) return Location 
 	is
 		nl : Location;
@@ -115,98 +187,92 @@ package body solutionpk is
 		return iv;
 	end;
 
-	procedure calculateVal(grid_val: IntegerVectorVector.Vector ; grid_totals : in out IntegerVectorVector.Vector ; l: Location)
-	is
-		LIMIT_STRAIGHT : constant Integer := 3;
-		line_sum : Integer;
-		vrow, vcol : Boolean := True;
-		col_val, row_val : Integer;
-		next_val : Integer;
-	begin
-		if l.row = 0 then
-			vrow := False;
-		end if;
-		if l.col = 0 then
-			vcol := False;
-		end if;
-		if l.row >= LIMIT_STRAIGHT then
-			line_sum := grid_totals(l.row-LIMIT_STRAIGHT)(l.col);
-			for I in l.row -LIMIT_STRAIGHT+1 .. l.row -1 loop
-				line_sum := line_sum + grid_val(I)(l.col);
-			end loop;
-			if line_sum = grid_totals(l.row-1)(l.col) then
-				vrow := False;
-				Put_Line("Straight rows");
-			end if;
-		end if;
-		if l.col >= LIMIT_STRAIGHT then
-			line_sum := grid_totals(l.row)(l.col-LIMIT_STRAIGHT);
-			for I in l.col -LIMIT_STRAIGHT+1 .. l.col -1 loop
-				line_sum := line_sum + grid_val(l.row)(I);
-			end loop;
-			if line_sum = grid_totals(l.row)(l.col-1) then
-				vcol := False;
-				Put_Line("Straight cols");
-			end if;
-		end if;
-		if vcol and vrow then
-			col_val := grid_totals(l.row)(l.col-1);
-			row_val := grid_totals(l.row-1)(l.col);
-			if col_val < row_val then
-				vrow := False;
-			else
-				vcol := False;
-			end if;
-		end if;
-		if vcol then
-			col_val := grid_totals(l.row)(l.col-1);
-			next_val := col_val + grid_val(l.row)(l.col);
-		elsif vrow then
-			row_val := grid_totals(l.row-1)(l.col);
-			next_val := row_val + grid_val(l.row)(l.col);
-		else
-			next_val := INVALID_RANGE_START;
-			Put_Line("Absolute Fuck!");
-		end if;
-		Put_Line("Row: " & l.row'Image & " col: " & l.col'Image & " nv: " & next_val'Image & " cv: " & col_val'Image & " rv: " & row_val'Image);
-		grid_totals(l.row)(l.col) := next_val;
-	end;
-
-
-	best_val : Integer := Integer'Last; 
-	traveled : LocationSet.Set;
 	function BestRoute(grid: IntegerVectorVector.Vector ) return Integer
 	is
-		calc_grid : IntegerVectorVector.Vector;
-		row_limit : Integer;
-		l : Location;
+		LIMIT_STRAIGHT : constant Integer := 2;
+		grid_totals : IntegerVectorVector.Vector;
+		l : Location_Access;
+		nl : Location;
+		td : Direction;
+		best_val : Integer := Integer'Last; 
+		current_dij, next_dij: DijkstraStorage_Access;
+		traveled : LocationSet.Set;
+		pendig_queue : DijkstraStorageSet.Set;
+		res : Integer := 0;
 	begin
-		calc_grid := CloneGrid(grid);
-		calc_grid(0)(0) := grid(0)(0);
-		Put_Line("Initial grid");
-		PrintGrid(calc_grid);
-		row_limit := Integer(Length(calc_grid)-1);
-		for I in 1 .. row_limit loop
-			for idx in 0 .. I loop
-				l.row := idx;
-				l.col := I-idx;
-				--calc_grid(l.row)(l.col) := I;
-				calculateVal(grid, calc_grid, l);
-			end loop;
+		grid_totals := CloneGrid(grid,0);
+
+		current_dij := new DijkstraStorage;
+		current_dij.l.row := 0;
+		current_dij.l.col := 0;
+		current_dij.cost := 0;
+		current_dij.dirSteps := 0;
+		current_dij.d := None;
+
+		pendig_queue.Insert(current_dij);
+
+		Put_Line("Main loop");
+		-- Main loop
+		while Length(pendig_queue) > 0 loop
+			current_dij := First_Element(pendig_queue);
+			Delete_First(pendig_queue);
+			l := new Location;
+			l.all := current_dij.l;
+
+			if l.row = Integer(Length(grid)-1) and l.col = Integer(Length(grid(0).all)-1) then
+				res := current_dij.cost;
+				exit;
+			end if;
+			-- Only if not processed
+			if not Contains(traveled, l) then
+				traveled.Insert(l);
+				grid_totals(current_dij.l.row)(current_dij.l.col) := current_dij.cost;
+				Put_Line("Loc row: " & l.row'Image & " col: " & l.col'Image & " cost: " & current_dij.cost'Image);
+				-- All other locations
+				for d in DirectionValid'First .. DirectionValid'Last loop
+					td := Opposite(d);
+					--Put_Line("Dir: " & d'Image & " Opodir: " & td'Image & " currDir: " & current_dij.d'Image);
+					if td /= current_dij.d then
+						nl := Step(current_dij.l, d);
+						if LocationValid(0,0,Integer(Length(grid)-1), Integer(Length(grid(0).all)-1), nl) then
+							if d /= current_dij.d then
+								--Put_Line("Steps valid");
+								next_dij := new DijkstraStorage;
+								next_dij.cost := current_dij.cost + grid(nl.row)(nl.col);
+								next_dij.d := d;
+								next_dij.l := nl;
+								next_dij.dirSteps := 1;
+								Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
+								pendig_queue.Insert(next_dij);
+							elsif d = current_dij.d and current_dij.dirSteps < LIMIT_STRAIGHT then
+								--Put_Line("Steps valid");
+								next_dij := new DijkstraStorage;
+								next_dij.cost := current_dij.cost + grid(nl.row)(nl.col);
+								next_dij.d := d;
+								next_dij.l := nl;
+								next_dij.dirSteps := current_dij.dirSteps + 1;
+								Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
+								pendig_queue.Insert(next_dij);
+
+							end if;
+						end if;
+					end if;
+				end loop;
+				Put_Line("ResultPath");
+				PrintGrid(grid_totals);
+			end if;
+			Free(current_dij);
 		end loop;
-		Put_Line("Inter grid");
-		PrintGrid(calc_grid);
-		for I in 1 .. Integer(Length(calc_grid(0).all)-1) loop
-			for idx in 0 .. row_limit - I loop
-				l.row := row_limit - idx;
-				l.col := I+idx;
-				--calc_grid(l.row)(l.col) := row_limit + I;
-				calculateVal(grid, calc_grid, l);
-			end loop;
+
+		while Length(traveled) > 0 loop
+			l := First_Element(traveled);
+			Delete_First(traveled);
+			Free(l);
 		end loop;
-		Put_Line("Final grid");
-		PrintGrid(calc_grid);
-		return calc_grid(Integer(Length(calc_grid)-1))(Integer(Length(calc_grid(0).all)-1));
+
+		Put_Line("ResultPath");
+		PrintGrid(grid_totals);
+		return res;
 	end;
 
 
