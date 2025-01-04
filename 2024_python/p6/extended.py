@@ -25,25 +25,6 @@ enum_vals = {
         Direction.left: (0,-1),
         }
 
-def collision(mat, start, direction):
-    loc = list(start)
-    next_loc = [0,0]
-    direction = direction
-    walk_step = enum_vals[direction]
-    #print(loc, direction, walk_step)
-    while True:
-        next_loc[0] = loc[0] + walk_step[0]
-        next_loc[1] = loc[1] + walk_step[1]
-        # Bad, we did not loop
-        if next_loc[0] < 0 or next_loc[1] < 0 or next_loc[0] >= len(mat) or next_loc[1] >= len(mat[0]):
-            break
-        # Must turn
-        if mat[next_loc[0]][next_loc[1]] == '#':
-            return True
-        loc[0] = next_loc[0]
-        loc[1] = next_loc[1]
-    return False
-
 def walk(org_mat, start, direction=Direction.up, depth=0):
     mat = copy.deepcopy(org_mat)
     tot = 0
@@ -51,7 +32,6 @@ def walk(org_mat, start, direction=Direction.up, depth=0):
     next_loc = [0,0]
     direction = direction
     walk_step = enum_vals[direction]
-    print(loc, direction, walk_step)
     mat[loc[0]][loc[1]] = [copy.deepcopy(direction)]
 
     while True:
@@ -78,14 +58,7 @@ def walk(org_mat, start, direction=Direction.up, depth=0):
             mat[next_loc[0]][next_loc[1]].append(copy.deepcopy(direction))
         loc[0] = next_loc[0]
         loc[1] = next_loc[1]
-        # If it makes sense to try loop
-        if depth==0 and collision(mat, loc, direction.next()):
-            next_mat = copy.deepcopy(org_mat)
-            mnl = [loc[0] + walk_step[0], loc[1] + walk_step[1]]
-            next_mat[mnl[0]][mnl[1]] = '#'
-            #print("Loop?")
-            tot += walk(next_mat, loc, direction.next(), depth=1)
-    return tot
+    return 0 
 
 def entry_func(inp: str):
     tot = 0
@@ -93,8 +66,14 @@ def entry_func(inp: str):
     print(mat)
     start = search_start(mat)
     print(start)
-    mat[start[0]][start[1]] = '.'
-    tot = walk(mat, start)
+
+    for r in range(len(mat)):
+        print(r, tot)
+        for c in range(len(mat[0])):
+            if mat[r][c] != '.': continue
+            mat[r][c] = '#'
+            tot += walk(mat, start)
+            mat[r][c] = '.'
     return tot
 
 if __name__ == "__main__":
