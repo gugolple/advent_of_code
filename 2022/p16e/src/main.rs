@@ -1,7 +1,8 @@
 use std::io;
 use std::io::prelude::*;
 use std::collections::HashMap;
-use std::collections::HashSet;
+use std::iter;
+
 
 fn input_to_map(input: &str) -> (HashMap<String, Vec<String>>, HashMap<String, u64>) {
     let mut tree: HashMap<String, Vec<String>> = HashMap::new();
@@ -33,10 +34,10 @@ enum Action {
     Move(String),
 }
 
-fn recurse_options(tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u64>, open: &mut HashSet<String>, node: &str) -> Vec<Action> {
+fn recurse_options(tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u64>, open: bool, node: &str) -> Vec<Action> {
     let mut actions: Vec<Action> = Vec::new();
     // Just recurse
-    if vals.contains_key(node) && !open.contains(node) {
+    if vals.contains_key(node) && !open {
         actions.push(Action::Activate(node.to_string()));
     }
     // Move
@@ -46,8 +47,7 @@ fn recurse_options(tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u
     return actions;
 }
 
-
-fn recurse(tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u64>, seen: &mut HashMap<(String, String, i64, u64), u64>, open: &mut HashSet<String>, node: (&str, &str), rem: i64, score: u64) -> u64 {
+fn recurse(keys: &Vec<String>, tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u64>, seen: &mut HashMap<(String, String, i64, u64), u64>, open: &mut Vec<bool>, node: (&str, &str), rem: i64, score: u64) -> u64 {
     //println!("Node: {}, D: {} S: {}", node, rem, score);
     // Rem ==> time remaining
     let seen_tup = (node.0.to_string(), node.1.to_string(), rem, score);
@@ -63,28 +63,30 @@ fn recurse(tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u64>, see
     let mut best_score = 0;
     let mut myscore = 0;
 
-    for act1 in recurse_options(tree, vals, open, node.0 ) {
+    let np1 = keys.iter().position(|n| n == node.0).unwrap();
+    let np2 = keys.iter().position(|n| n == node.1).unwrap();
+    for act1 in recurse_options(tree, vals, open[np1], node.0 ) {
         if let Action::Activate(ref n) = act1 {
-            open.insert(n.to_string());
+            open[np1] = true;
             myscore = myscore + vals[n] * (rem -1) as u64;
         }
-        for act2 in recurse_options(tree, vals, open, node.1) {
+        for act2 in recurse_options(tree, vals, open[np2], node.1) {
             if let Action::Activate(ref n) = act2 {
-                open.insert(n.to_string());
+                open[np2] = true;
                 myscore = myscore + vals[n] * (rem -1) as u64;
             }
             let next_nodes = [&act1, &act2].iter().map(|x| match x {  Action::Activate(n) => n, Action::Move(n) => n}).map(|x| x.clone()).collect::<Vec<String>>();
-            let sc = recurse(tree, vals, seen, open, (next_nodes[0].as_str(), next_nodes[1].as_str()), rem -1, score + myscore);
+            let sc = recurse(keys, tree, vals, seen, open, (next_nodes[0].as_str(), next_nodes[1].as_str()), rem -1, score + myscore);
             if sc > best_score {
                 best_score = sc;
             }
             if let Action::Activate(ref n) = act2 {
-                open.remove(n.as_str());
+                open[np2] = false;
                 myscore = myscore - vals[n] * (rem -1) as u64;
             }
         }
         if let Action::Activate(ref n) = act1 {
-            open.remove(n.as_str());
+            open[np1] = false;
             myscore = myscore - vals[n] * (rem -1) as u64;
         }
     }
@@ -96,9 +98,10 @@ fn recurse(tree: &HashMap<String, Vec<String>>, vals: &HashMap<String, u64>, see
 
 fn process_input(input: &str) -> u64 {
     let (tree, vals) = input_to_map(input);
-    println!("Tree: {:?}", tree);
+    println!("Tree size:{} {:?}", tree.len(), tree);
     println!("Vals: {:?}", vals);
-    let rec =  recurse(&tree, &vals, &mut HashMap::new(), &mut HashSet::new(), ("AA", "AA"), 26, 0);
+    let keys = tree.keys().map(|x| x.clone()).collect();
+    let rec =  recurse(&keys, &tree, &vals, &mut HashMap::new(), &mut iter::repeat(false).take(keys.len()).collect(), ("AA", "AA"), 26, 0);
     println!("Recurse ret: {}", rec);
     return rec;
 }
