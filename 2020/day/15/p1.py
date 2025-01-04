@@ -80,6 +80,7 @@ class TestAdvent(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    rows = sys.stdin.read().strip().split("\n")[0].split(',')
+    rows = list(map(lambda x: int(x), sys.stdin.read().strip().split("\n")[0].split(',')))
+    print(rows)
 
-    print(main(rows, 2022))
+    print(main(rows))
