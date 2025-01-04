@@ -2,122 +2,114 @@ use std::io;
 use std::io::prelude::*;
 use std::cmp::Ordering;
 
-fn pair_check(left: &Vec<&str>, right: &Vec<&str>) -> bool {
-    //println!("Pair test!");
-    //println!("Left: {:?}", left);
-    //println!("Right: {:?}", right);
-    let mut lit = left.iter();
-    let mut ldepth = 0;
-    let mut ldepthcheck = false;
-    let mut rit = right.iter();
-    let mut rdepth = 0;
-    let mut rdepthcheck = false;
+#[derive(PartialEq, Debug)]
+enum ListItemDef {
+    Num(i32),
+    SubList(Vec<ListItemDef>),
+    Empty,
+}
 
-    loop {
-        let lc = lit.next();
-        let rc = rit.next();
-
-        print!("L: {:?} -- R: {:?} ____ ", lc, rc);
-
-        if lc.is_none() && !rc.is_none() {
-            return true;
-        } else if !lc.is_none() && rc.is_none() {
-            return false;
-        } else if lc.is_none() && rc.is_none() {
-            panic!("Empty both!");
-        } else {
-            let lstr = lc.expect("Already confirmed");
-            let rstr = rc.expect("Already confirmed");
-            ldepth = ldepth + lstr.matches('[').count();
-            rdepth = rdepth + rstr.matches('[').count();
-
-            let ldepthred = lstr.matches(']').count();
-            let rdepthred = rstr.matches(']').count();
-
-            let lval = lstr.replace(&['[',']'][..],"").parse::<usize>();
-            let rval = rstr.replace(&['[',']'][..],"").parse::<usize>();
-
-            print!("Depth L: {} R: {} ____ Vals L: {:?} R: {:?}", ldepth, rdepth, lval, rval);
-
-            if ldepth == rdepth {
-                ldepthcheck = false;
-                rdepthcheck = false;
-                if lval.is_ok() && rval.is_ok(){
-                    match lval.expect("Checked").cmp(&rval.expect("Checked")) {
-                        Ordering::Less => return true,
-                        Ordering::Greater => return false,
-                        Ordering::Equal => (),
+fn recursive_parse_aux(itr: &Vec<char>, idx: usize) -> (ListItemDef, usize) {
+    let first = itr[idx];
+    //println!("First: {:?}", first);
+    let mut result;
+    let mut counter = 1;
+    if first == '[' {
+        result = ListItemDef::SubList(Vec::new());
+        //println!("Recursion!");
+        while idx+counter < itr.len() {
+            let nc = itr[idx + counter];
+            let (nlid, ncounter) = match nc {
+                '[' => recursive_parse_aux(itr, idx+counter),
+                ']' => {
+                    counter = counter + 1;
+                    break;
+                },
+                ',' | ' ' => (ListItemDef::Empty, 1),
+                '0' ..= '9' => recursive_parse_aux(itr, idx+counter),
+                _ => panic!("What did come?: {}", nc),
+            };
+            match nlid {
+                ListItemDef::Empty => (),
+                _ => {
+                    if let ListItemDef::SubList(ref mut tv) = result {
+                        tv.push(nlid);
                     }
-                } else if !lval.is_ok() && rval.is_ok(){
-                    return true;
-                } else if lval.is_ok() && !rval.is_ok(){
-                    return false;
-                }
-            } else {
-                let delta = (ldepth as i64 - rdepth as i64).abs();
-                if ldepth < rdepth {
-                    if ldepthred == 0 {
-                        return false;
-                    }
-                    if ldepthcheck {
-                        return true;
-                    }
-                    if delta > 1 {
-                        return true;
-                    }
-                    ldepthcheck = true;
-                } else {
-                    if rdepthred == 0 {
-                        return true;
-                    }
-                    if rdepthcheck {
-                        return false;
-                    }
-                    if delta > 1 {
-                        return false;
-                    }
-                    rdepthcheck = true;
-                }
-                if lval.is_ok() && rval.is_ok(){
-                    match lval.expect("Checked").cmp(&rval.expect("Checked")) {
-                        Ordering::Less => return true,
-                        Ordering::Greater => return false,
-                        Ordering::Equal => (),
-                    }
-                } else if !lval.is_ok() && rval.is_ok() {
-                    return true;
-                } else if lval.is_ok() && !rval.is_ok() {
-                    return false;
-                } else {
-                    if ldepth < rdepth {
-                        return true;
-                    } else {
-                        return false;
-                    }
-                }
-            }
-            ldepth = ldepth - ldepthred;
-            rdepth = rdepth - rdepthred;
+                },
+            };
+            counter = counter + ncounter;
         }
-        println!("");
+    } else {
+        let mut mstr: Vec<char> = Vec::new();
+        mstr.push(first);
+        while  idx+counter < itr.len() {
+            let nc = itr[idx + counter];
+            if nc.is_digit(10) {
+                mstr.push(nc);
+            } else {
+                break;
+            }
+            counter = counter + 1;
+        }
+        result = ListItemDef::Num(mstr.iter().collect::<String>().parse::<i32>().expect("Bad parsing"));
+    }
+    return (result, counter);
+}
+
+fn recursive_parse(itr: &Vec<char>) -> ListItemDef {
+    return recursive_parse_aux(itr, 0).0;
+}
+
+
+fn pair_check(left: &ListItemDef, right: &ListItemDef) -> Ordering {
+    println!("Cmp");
+    println!("  L: {:?}", left);
+    println!("  R: {:?}", right);
+    match left {
+        ListItemDef::SubList(l) => {
+            match right {
+                ListItemDef::SubList(r) => {
+                    // Both are lists!
+                    for (litm, ritm) in l.iter().zip(r.iter()) {
+                        let pcr = pair_check(litm, ritm);
+                        if pcr != Ordering::Equal {
+                            return pcr;
+                        }
+                    }
+                    l.len().cmp(&r.len())
+                },
+                ListItemDef::Num(r) => pair_check(left, &ListItemDef::SubList(vec![ListItemDef::Num(*r)])),
+                ListItemDef::Empty => panic!("Bad data"),
+            }
+        },
+        ListItemDef::Num(l) => {
+            match right {
+                ListItemDef::SubList(_r) => pair_check(&ListItemDef::SubList(vec![ListItemDef::Num(*l)]), right),
+                ListItemDef::Num(r) => l.cmp(r),
+                ListItemDef::Empty => panic!("Bad data"),
+            }
+        },
+        ListItemDef::Empty => panic!("Bad data"),
     }
 }
+
 
 fn process_input(input: &str) -> u64 {
     let mut result = 0;
     let mut pair_num = 1;
-    let mut left: Vec<&str> = Vec::new();
-    let mut right: Vec<&str> = Vec::new();
+    let mut left: ListItemDef = ListItemDef::Empty;
+    let mut right: ListItemDef = ListItemDef::Empty;
     for line in input.split("\n") {
         if line != "" {
-            let tmp_desc: Vec<&str> = line.split(',').collect();
-            if tmp_desc.len() == 0 {
-                panic!("BAD PARSING!");
-            }
+            println!("Line: {}", line);
 
-            if left.len() == 0 {
+            let tmp_desc = recursive_parse(&line.chars().collect());
+
+            println!("Parsed: {:?}", tmp_desc);
+
+            if left == ListItemDef::Empty {
                 left = tmp_desc;
-            } else if right.len() == 0 {
+            } else if right == ListItemDef::Empty {
                 right = tmp_desc;
             } else {
                 panic!("Pair not closed!");
@@ -125,28 +117,40 @@ fn process_input(input: &str) -> u64 {
         } else {
             // Main logic due to pair wise checking, at least a delimitor
             println!("Pair num: {}", pair_num);
-            if pair_check(&left, &right) {
-                println!("");
-                println!("Pair ordered!");
-                result = result + pair_num;
-            } else {
-                println!("");
-                println!("Pair NOT ordered!");
+            match pair_check(&left, &right) {
+                Ordering::Less => {
+                    println!("");
+                    println!("Pair ordered!");
+                    result = result + pair_num;
+                },
+                Ordering::Greater => {
+                    println!("");
+                    println!("Pair NOT ordered!");
+                }
+                Ordering::Equal => {
+                    panic!("Why are they equals!");
+                }
             }
-            left.clear();
-            right.clear();
+            left = ListItemDef::Empty;
+            right = ListItemDef::Empty;
             pair_num = pair_num + 1;
         }
     }
-    if left.len() > 0 || right.len() > 0 {
-        println!("outsideeer");
-        if pair_check(&left, &right) {
-            println!("");
-            println!("Pair ordered!");
-            result = result + pair_num;
-        } else {
-            println!("");
-            println!("Pair NOT ordered!");
+    if left != ListItemDef::Empty || right != ListItemDef::Empty {
+        println!("Pair num: {}", pair_num);
+        match pair_check(&left, &right) {
+            Ordering::Less => {
+                println!("");
+                println!("Pair ordered!");
+                result = result + pair_num;
+            },
+            Ordering::Greater => {
+                println!("");
+                println!("Pair NOT ordered!");
+            }
+            Ordering::Equal => {
+                panic!("Why are they equals!");
+            }
         }
     }
 
@@ -271,6 +275,6 @@ mod tests {
     fn test_advent_basicb() {
         let input = "[[2,3]]
 [[[2, 3]],3] ";
-        assert_eq!(process_input(input),0,"Test has failed");
+        assert_eq!(process_input(input),1,"Test has failed");
     }
 }
