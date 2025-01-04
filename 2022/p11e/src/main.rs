@@ -1,38 +1,39 @@
 use std::io;
 use std::io::prelude::*;
 use std::cell::RefCell;
+use num::integer::lcm;
 
 #[derive(Debug)]
 struct MonkeyDesc {
     id: usize,
-    items: Vec<i128>,
+    items: Vec<u64>,
     operation: Vec<String>,
-    test_value: i128,
+    test_value: u64,
     true_dest: usize,
     false_dest: usize,
-    inspect_count: u128,
+    inspect_count: u64,
 }
 
 fn parse_monkey(line: &str) -> MonkeyDesc {
     //println!("Money!: {}", line);
     let description: Vec<_> = line.split("\n").map(|x| x.trim()).collect();
-    println!("");
-    for item in &description {
-        println!("Monke desc: {}", item);
-    }
+    //println!("");
+    //for item in &description {
+    //    println!("Monke desc: {}", item);
+    //}
 
     let monkey_id = description[0].split(" ").skip(1).next().expect("I want to make someone cry").trim_end_matches(':').parse::<usize>().unwrap();
-    println!("Id: {}", monkey_id);
-    let monkey_items: Vec<i128> = description[1].split(": ").skip(1).next().expect("I want to make someone cry").split(", ").map(|x| x.parse::<i128>().unwrap()).collect();
-    println!("Items: {:?}", monkey_items);
+    //println!("Id: {}", monkey_id);
+    let monkey_items: Vec<u64> = description[1].split(": ").skip(1).next().expect("I want to make someone cry").split(", ").map(|x| x.parse::<u64>().unwrap()).collect();
+    //println!("Items: {:?}", monkey_items);
     let monkey_op: Vec<_> = description[2].split(" = ").skip(1).next().expect("I want to make someone cry").split(" ").map(|x| x.to_string()).collect();
-    println!("Operation: {:?}", monkey_op);
-    let monkey_test: i128 = description[3].split("by ").skip(1).next().expect("I want to make someone cry").parse::<i128>().unwrap();
-    println!("Test: {}", monkey_test);
+    //println!("Operation: {:?}", monkey_op);
+    let monkey_test: u64 = description[3].split("by ").skip(1).next().expect("I want to make someone cry").parse::<u64>().unwrap();
+    //println!("Test: {}", monkey_test);
     let monkey_true: usize = description[4].split("monkey ").skip(1).next().expect("I want to make someone cry").parse::<usize>().unwrap();
-    println!("true: {}", monkey_true);
+    //println!("true: {}", monkey_true);
     let monkey_false: usize = description[5].split("monkey ").skip(1).next().expect("I want to make someone cry").parse::<usize>().unwrap();
-    println!("false: {}", monkey_false);
+    //println!("false: {}", monkey_false);
 
     return MonkeyDesc{
         id: monkey_id,
@@ -45,8 +46,8 @@ fn parse_monkey(line: &str) -> MonkeyDesc {
     };
 }
 
-fn process_input(input: &str, rounds: usize) -> u128 {
-    let mut total: u128 = 0;
+fn process_input(input: &str, rounds: usize) -> u64 {
+    let mut total: u64 = 0;
     let mut monkey_vec: Vec<RefCell<MonkeyDesc>> = Vec::new();
     // This loop is only parsing
     for line in input.split("\n\n") {
@@ -55,36 +56,42 @@ fn process_input(input: &str, rounds: usize) -> u128 {
             monkey_vec.push(parse_monkey(line).into());
         }
     }
+    let mut mlcm: u64 = 1;
+    for cur_test_val in monkey_vec.iter().map(|m| m.borrow().test_value) {
+        mlcm = lcm(mlcm, cur_test_val);
+    }
+    println!("LCM of all!: {}", mlcm);
+
 
     // Main loop logic
     for _ in 0 .. rounds {
         // Debug print the status
-        for monk in &monkey_vec {
-            println!("{:?}", monk);
-        }
+        //for monk in &monkey_vec {
+        //    println!("{:?}", monk);
+        //}
 
         // Logic
         for ref_monk in &monkey_vec {
             let mut monk = ref_monk.borrow_mut();
-            println!("Monk id: {}", monk.id);
-            monk.inspect_count = monk.inspect_count + monk.items.len() as u128;
+            //println!("Monk id: {}", monk.id);
+            monk.inspect_count = monk.inspect_count + monk.items.len() as u64;
             for item in &monk.items {
-                let left_val: i128 = match monk.operation[0].as_str() {
+                let left_val: u64 = match monk.operation[0].as_str() {
                     "old" => *item,
-                    _ => monk.operation[0].parse::<i128>().unwrap()
+                    _ => monk.operation[0].parse::<u64>().unwrap()
                 };
-                let right_val: i128 = match monk.operation[2].as_str() {
+                let right_val: u64 = match monk.operation[2].as_str() {
                     "old" => *item,
-                    _ => monk.operation[2].parse::<i128>().unwrap()
+                    _ => monk.operation[2].parse::<u64>().unwrap()
                 };
                 // After the inspection, before test
-                let new_val: i128 = match monk.operation[1].as_str() {
+                let new_val: u64 = match monk.operation[1].as_str() {
                     "+" => left_val + right_val,
                     "*" => left_val * right_val,
                     _ => panic!("Bad operation!"),
-                };
+                } % mlcm;
                 
-                println!("Old val: {} New val: {}", *item, new_val); 
+                //println!("Old val: {} New val: {}", *item, new_val); 
                 //println!("Left val: {} Right val: {}", left_val, right_val); 
 
                 if (new_val % monk.test_value) == 0 {
@@ -155,8 +162,9 @@ Monkey 3:
     If true: throw to monkey 0
     If false: throw to monkey 1";
         let rounds = vec![1, 20, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
-        let solutions: Vec<u128> = vec![6*4, 103*99, 5204*5192, 10419*10391, 15638*15593, 20858*20797, 26075*26000, 31294*31204, 36508*36400, 41728*41606, 46945*46807, 52166*52013];
+        let solutions: Vec<u64> = vec![6*4, 103*99, 5204*5192, 10419*10391, 15638*15593, 20858*20797, 26075*26000, 31294*31204, 36508*36400, 41728*41606, 46945*46807, 52166*52013];
         for (test, (rou, sol)) in rounds.iter().zip(solutions.iter()).enumerate() {
+            println!("Test: {}, iteration: {}", test+1, *rou);
             let res = process_input(&input,*rou);
             assert_eq!(res,*sol, "Failed at test: {}, iteration: {}, Target: {} Obtained: {}", test, *rou, *sol, res);
     }
