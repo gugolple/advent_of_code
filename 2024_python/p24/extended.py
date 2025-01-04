@@ -57,7 +57,8 @@ def get_max_digit(known_wires):
                 max_digit = cd
     return max_digit
 
-def check_dir_xor(unkown_gates, xy, ops):
+def get_dig_str(dig):
+    return f"{dig:02d}"
 
 ################################################################################
 ########## Current layout
@@ -67,17 +68,17 @@ def check_dir_xor(unkown_gates, xy, ops):
 # ADD_BIT AND2 CARRY_IN -> ANDBIT2
 # ANDBIT1 OR ANDBIT2 -> CARRY_OUT
 ################################################################################
-def dirsolv(xy, pop, match_op)
+def dirsolv(xy, pop, match_op):
     x, y = xy
     l, op, r = pop
     return op == match_op and x == l and y == r
 
-def xor1(dig, pop)
-    act_dig = f"{dig:02d}"
+def xor1(dig, pop):
+    act_dig = get_dig_str(dig)
     return dirsolv(("x" + act_dig, "y" + act_dig), pop, "XOR")
 
-def and1(dig, pop)
-    act_dig = f"{dig:02d}"
+def and1(dig, pop):
+    act_dig = get_dig_str(dig)
     return dirsolv(("x" + act_dig, "y" + act_dig), pop, "AND")
 
 def carry_out(unkown_gates, dig, pop):
@@ -114,41 +115,75 @@ def carry_out(unkown_gates, dig, pop):
     return carry_out(unkown_gates, dig-1, rc)
 
 def check_add(unkown_gates, dig):
+    act_dig = get_dig_str(dig)
     ea = "z" + act_dig
     cg = unkown_gates[ea]
     x, gt, y = cg
-    if ea == 'z00':
-        return gt == 'XOR' and sorted([x, y]) == ['x00', 'y00']
-    ux = unkown_gates[x]
-    uy = unkown_gates[y]
-    print(dig, ea, cg, ux, uy)
-    add_wire = None
-    carry_wire = None
-    if check_dir_xor(unkown_gates, xy, ux):
-        add_wire = x
-        carry_wire = y
-    elif check_dir_xor(unkown_gates, xy, uy):
-        add_wire = y
-        carry_wire = x
-    else:
+    if dig == 0:
+        ans = gt == 'XOR' and sorted([x, y]) == ['x00', 'y00']
+        print("CA0", dig, ans)
+        return ans
+    if gt != "XOR":
+        print("CA1", dig)
         return False
-    print("ADDw", add_wire)
-    print("CRYw", carry_wire)
-    return True
+    bw = ["x", "y"]
+    if x[0] in bw or y[0] in bw:
+        print("CA2", dig)
+        return False
+    w1 = unkown_gates[x]
+    w2 = unkown_gates[y]
+    dxor = None
+    cin = None
+    #print("DIG", dig, ea, cg, w1, w2)
+    if xor1(dig, w1):
+        dxor = w1
+        cin = w2
+    elif xor1(dig, w2):
+        dxor = w2
+        cin = w1
+    else:
+        print("CA3", dig, w1, w2)
+        return False
+    return carry_out(unkown_gates, dig-1, cin)
 
 def solve_all_add(unkown_gates, max_digit):
-    swps = []
     for dig in range(max_digit+1):
         if not check_add(unkown_gates, dig):
-            break
-    return swps
+            print("Ret?", dig)
+            return dig
+    return max_digit+1
 
+def test_all(unkown_gates, max_digit):
+    tgt = max_digit+1
+    swaps = []
+    baseline = solve_all_add(unkown_gates, max_digit)
+    print(baseline, tgt)
+    while baseline != tgt:
+        for x in unkown_gates:
+            for y in unkown_gates:
+                #print(x, y)
+                if x == y: continue
+                unkown_gates[x], unkown_gates[y] = unkown_gates[y], unkown_gates[x]
+                cur = solve_all_add(unkown_gates, max_digit)
+                if cur > baseline:
+                    print("FOUND!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    baseline = cur
+                    break
+                unkown_gates[x], unkown_gates[y] = unkown_gates[y], unkown_gates[x]
+            else:
+                continue
+            break
+        swaps += [x, y]
+        break
+    return swaps
 
 def entry_func(inp: str, func: str = "ADD"):
     known_wires, unkown_gates = process_raw_inp(inp)
     res = None
     if func == "ADD":
-        res = solve_all_add(unkown_gates, get_max_digit(known_wires))
+        res = test_all(unkown_gates, get_max_digit(known_wires))
+    else:
+        exit(1)
     return ",".join(res)
 
 if __name__ == "__main__":
@@ -178,24 +213,24 @@ jgw AND ndd -> qnq
 qnq OR dpc -> z03"""
         self.assertEqual(entry_func(inp_str, "ADD"), "")
 
-    def test_example_add_all_correct(self):
-        inp_str = """x00: 1
-x01: 0
-x02: 1
-y00: 1
-y01: 0
-y02: 0
-
-x00 XOR y00 -> z00
-x00 AND y00 -> jfw
-x01 XOR y01 -> gnj
-x01 AND y01 -> ntt
-jfw XOR gnj -> z01
-gnj AND jfw -> spq
-ntt OR spq -> ndd
-x02 XOR y02 -> jgw
-x02 AND y02 -> dpc
-ndd XOR jgw -> z02
-jgw AND ndd -> qnq
-qnq OR dpc -> z03"""
-        self.assertEqual(entry_func(inp_str, "ADD"), "")
+#    def test_example_add_with_1_swp(self):
+#        inp_str = """x00: 1
+#x01: 0
+#x02: 1
+#y00: 1
+#y01: 0
+#y02: 0
+#
+#x00 XOR y00 -> z00
+#x00 AND y00 -> jfw
+#x01 XOR y01 -> gnj
+#x01 AND y01 -> ntt
+#jfw XOR gnj -> z01
+#gnj AND jfw -> spq
+#ntt OR spq -> ndd
+#x02 XOR y02 -> jgw
+#x02 AND y02 -> dpc
+#ndd XOR jgw -> qnq
+#jgw AND ndd -> z02
+#qnq OR dpc -> z03"""
+#        self.assertEqual(entry_func(inp_str, "ADD"), "")
