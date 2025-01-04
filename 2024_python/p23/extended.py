@@ -17,41 +17,6 @@ def generate_connections(inp):
             con[r] = set([l])
     return con
 
-def generate_recursv(cons, lc, depth):
-    if depth == 1:
-        print("--RE", lc)
-        return set([tuple(sorted(lc))])
-    set_pos = set()
-    set_pos |= cons[lc[0]]
-    for le in lc[1:]:
-        cp = cons[le]
-        if cp is not None:
-            set_pos &= cp
-    print("lc", lc, set_pos)
-    resl = 0
-    res = set()
-    for rp in set_pos:
-        nlc = deepcopy(lc)
-        nlc.append(rp)
-        cp = generate_recursv(cons, nlc, depth-1)
-        print("ICP", cp)
-        for ccp in cp:
-            cpl = len(ccp)
-            if cpl>resl:
-                resl = cpl
-                res = set([ccp])
-            elif cpl == resl:
-                res.add(ccp)
-    return res
-
-def generate_all_recursv(cons, depth):
-    print(cons)
-    total = set()
-    for start in sorted(cons.keys()):
-        #print(start)
-        total |= generate_recursv(cons, [start], depth)
-    return total
-
 def generate_max_recursv(cons, lc):
     set_pos = set()
     set_pos |= cons[lc[0]]
@@ -97,24 +62,6 @@ def generate_all_max_recursv(cons):
             elif lce == best:
                 res.add(ce)
     return res
-
-
-def generate_triplets(cons):
-    trip = set()
-    for start in cons:
-        for second in cons[start]:
-            if start == second:
-                continue
-            for third in cons[second]:
-                if start == third or second == third:
-                    continue
-                if third not in cons[start]:
-                    continue
-                #print("TRIPL", start, second, third)
-                tpl = tuple(sorted([start, second, third]))
-                if tpl not in trip:
-                    trip.add(tpl)
-    return trip
 
 def entry_func(inp: str):
     tot = 0
@@ -168,11 +115,3 @@ td-yn"""
         ans = generate_all_max_recursv(self.pairs)
         act_ans = ",".join(ans.pop())
         self.assertEqual(act_ans, "co,de,ka,ta")
-
-    def test_triplets(self):
-        self.assertEqual(len(generate_triplets(self.pairs)), 12)
-
-    def test_triplets_rec(self):
-        ans = generate_all_recursv(self.pairs, 3)
-        print(ans)
-        self.assertEqual(len(ans), 12)
