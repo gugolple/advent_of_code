@@ -1,4 +1,5 @@
 import unittest, sys, heapq
+from collections import deque
 from enum import Enum
 
 # Orientation
@@ -42,6 +43,9 @@ cost_pairs = {
 def print_mat(mat):
     [print(r) for r in mat]
 
+def print_mat_pad(mat):
+    [print([str(e).zfill(4) for e in r]) for r in mat]
+
 def find_mat(mat, v):
     for ridx, row in enumerate(mat):
         for cidx, e in enumerate(row):
@@ -77,10 +81,10 @@ def walk_path_dijstra(mat, start_loc_or):
         if get_mat(mat, l) == 'E':
             if best == 0 or best > c:
                 best = c
-        if (l, o) in seen:
+        nmc = get_mat(nm, l)
+        if (l, o) in seen and nmc < c:
             continue
         seen.add((l, o))
-        nmc = get_mat(nm, l)
         if nmc == -1 or c < nmc:
             set_mat(nm, l, c)
         #print(c, l, o)
@@ -90,14 +94,36 @@ def walk_path_dijstra(mat, start_loc_or):
             if get_mat(mat, nl) != '#':
                 nc = c + 1 + cost_pairs[o, no]
                 heapq.heappush(hpq, (nc, nl, no))
-    print_mat(nm)
-    return best
+    return nm
+
+def count_paths(mat, wm):
+    el = find_mat(mat, 'E')
+    seen = set()
+    cv = get_mat(wm, el)
+    pl = deque([(el, cv)]) 
+    while len(pl) > 0:
+        cl, cv = pl.popleft()
+        if cv < 0:
+            continue
+        if cl in seen:
+            continue
+        print(cl, cv)
+        seen.add(cl)
+        for m in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nl = add_pos(cl, m)
+            nv = get_mat(wm, nl)
+            if nv+1 == cv or nv+1001 == cv:
+                pl.append((nl, nv))
+    print(len(seen))
+    return 0
 
 def entry_func(inp: str):
     mat = [list(i) for i in inp.split('\n')]
-    #print_mat(mat)
+    print_mat(mat)
     start_loc_or = (find_mat(mat, 'S'),Or.E)
-    tot = walk_path_dijstra(mat, start_loc_or)
+    walked_mat = walk_path_dijstra(mat, start_loc_or)
+    print_mat_pad(walked_mat)
+    tot = count_paths(mat, walked_mat)
     return tot
 
 if __name__ == "__main__":
