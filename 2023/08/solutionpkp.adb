@@ -141,7 +141,7 @@ package body solutionpkp is
 		
 		while continue loop
 			for I in 1 .. Length(command_string) loop
-				Put_Line("new loop!");
+				--Put_Line("new loop!");
 				continue := False;
 				for J in all_locations.first_index .. all_locations.last_index loop
 					current := all_locations(J);
@@ -150,7 +150,7 @@ package body solutionpkp is
 						when 'R' => next_step := NodeMap.Element(all_nodes, current).Right;
 						when others => Put_Line("Failuroso");
 					end case;
-					Put_Line("Origin: " & To_String(current) & " Destination: " & To_String(next_step));
+					--Put_Line("Origin: " & To_String(current) & " Destination: " & To_String(next_step));
 					all_locations(J) := next_step;
 					if Element(next_step, Length(next_step)) /= 'Z' then
 						continue := True;
@@ -160,6 +160,9 @@ package body solutionpkp is
 				if not continue then
 					Put_Line("All Found!");
 					exit;
+				end if;
+				if total mod 10000 = 0 then
+					Put_Line("Iterations: " & total'image);
 				end if;
 			end loop;
 		end loop;
