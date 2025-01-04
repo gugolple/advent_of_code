@@ -83,9 +83,10 @@ package body solutionpkp is
 
 
 	function CheckValid(str: Unbounded_String) return boolean is
-		beg, fin, tfin : Integer := 1;
-		Broken : constant Character_Set := To_Set("#");
-		Working : constant Character_Set := To_Set(".");
+		beg, fin : Integer := 1;
+		tfin : Integer := 0;
+		Broken : constant Character_Set := To_Set("#?");
+		Working : constant Character_Set := To_Set(".?");
 		valid : Boolean := True;
 	begin
 		for L of values loop
@@ -97,20 +98,27 @@ package body solutionpkp is
 			if beg = 0 then
 				valid := False;
 				exit;
+			elsif Element(str, beg) = '?' then
+				Put_Line("Early exit beg!");
+				exit;
 			end if;
 			fin := Index(
 				Source => str,
 				Set => Working,
 				From => beg
 				);
+			Put_Line("F: " & Fin'Image & " B: " & Beg'Image);
 			if fin = 0 then
-				tfin := fin;
+				tfin := Length(str);
 				fin := Length(str)+1;
-			end if;
-			--Put_Line("F: " & Fin'Image & "B: " & Beg'Image);
-			if fin-beg /= L then
-				valid := False;
+			elsif fin-beg /= L then
+				if fin-beg <= L and then Element(str, fin) = '?' then
+					Put_Line("Early exit end!");
+				else
+					valid := False;
+				end if;
 				exit;
+			--Early exit, test only what we can
 			end if;
 		end loop;
 		if valid and tfin /= 0 then
@@ -119,7 +127,7 @@ package body solutionpkp is
 				Set => Broken,
 				From => fin
 				);
-			if beg /= 0 then
+			if beg /= 0 and then Element(str, beg) /= '?' and then Element(str, tfin) /= '?' then
 				valid := false;
 			end if;
 		end if;
@@ -141,8 +149,12 @@ package body solutionpkp is
 	begin
 		mslice := To_Unbounded_String(Slice(str, pos, Length(str)));
 		Put_Line("Pos: " & pos'Image & " slice: " & To_String(mslice) & " str: " & To_string(str));
-		if Contains(dp, mslice) then
-			return Element(dp, mslice);
+		if pos > 1 and then not CheckValid(str) then
+			return total;
+		elsif Contains(dp, mslice) then
+			total := Element(dp, mslice);
+			Put_Line("Known! Val: " &  total'Image);
+			return total;
 		end if;
 		idx := Index(
 			Source => str,
@@ -150,9 +162,8 @@ package body solutionpkp is
 			From => 1
 			);
 		if idx = 0 then
-			if CheckValid(mslice) then
-				return 1;
-			end if;
+			Put_Line("All valid!");
+			return 1;
 		else
 			overwrite(str, idx, ".");
 			curr := RecurseSolution(str, idx);
@@ -162,7 +173,11 @@ package body solutionpkp is
 			total := total + curr;
 			overwrite(str, idx, "?");
 			if not Contains(dp, mslice) and total > 0 then
-				Insert(dp, mslice, total);
+				tstr := new Unbounded_String;
+				for I in 1 .. Length(mslice) loop
+					append(tstr.all, Element(mslice, I));
+				end loop;
+				Insert(dp, tstr.all, total);
 			end if;
 		end if;
 		Put_Line("R total: " & total'Image);
