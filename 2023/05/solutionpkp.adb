@@ -1,106 +1,102 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
-with Ada.Characters.Handling; use  Ada.Characters.Handling;
 with Ada.Strings.Maps; use Ada.Strings.Maps;
 
 with Ada.Containers; use Ada.Containers;
-with Ada.Containers.Indefinite_Ordered_Maps;
+with Ada.Containers.Vectors;
 with Ada.Containers.Ordered_Sets;
 
 with solutionpkp; use solutionpkp;
 
 package body solutionpkp is
-	Function "<" (Left, Right: In seed_range_record) return boolean
-	is
-		res : boolean := false;
-	begin
-		if Left.start < Right.start then
-			res := true;
-		elsif Left.start = Right.start then
-			if Left.range_end < Right.range_end then
-				res := true;
-			end if;
-		end if;
-		return res;
-	end "<";
+    type SeedRange is record
+        start_range: Long_Long_Integer;
+        end_range: Long_Long_Integer;
+    end record;
 
-	Function "=" (Left, Right: In seed_range_record) return boolean
-	is
-		res : boolean := false;
-	begin
-		if Left.start = Right.start then
-			if Left.range_end = Right.range_end then
-				res := true;
-			end if;
-		end if;
-		return res;
-	end "=";
+    function "<"(Left, Right: SeedRange) return boolean
+    is
+    begin
+        return Left.start_range < Right.start_range;
+    end;
 
-	package SeedRangeRecordSet is 
-		new Ada.Containers.Ordered_Sets(
-			Element_Type => seed_range_record
+    type Transfomration is record
+        start_range: Long_Long_Integer;
+        end_range: Long_Long_Integer;
+        destination_start: Long_Long_Integer;
+    end record;
+
+    function transformationFromString(str: Unbounded_String) return Transfomration
+    is
+		idx,idxl  : Natural := 1;
+		Search_Set : constant Character_Set := To_Set(" ");
+        res : Transfomration;
+	begin
+        --Put_Line("Transform from string: " & To_String(str));
+		-- Capture destination data
+		idx := Index(
+			Source => str,
+			Set => Search_Set,
+			From => idx
 			);
+        res.destination_start := Long_Long_Integer'Value(Slice(str,idxl,idx));
 
-	use SeedRangeRecordSet;
-	seeds_storage : SeedRangeRecordSet.Set;
-	seeds_current : SeedRangeRecordSet.Set;
-	seeds_mapped  : SeedRangeRecordSet.Set;
+        idxl := idx + 1;
+        idx := Index(
+            Source => str,
+            Set => Search_Set,
+            From => idx+1
+            );
+        res.start_range := Long_Long_Integer'Value(Slice(str,idxl,idx));
 
+        idxl := idx + 1;
+        res.end_range := res.start_range + Long_Long_Integer'Value(Slice(str,idxl,Length(str))) -1;
 
-	destination   : Long_Integer;
-	source        : Long_Integer;
-	source_end    : Long_Integer;
-		
+        return res;
+    end;
+
+	package Long_Long_IntegerVector is new
+		Ada.Containers.Vectors
+			(Index_Type => Natural,
+			Element_Type => Long_Long_Integer 
+			);
+	use Long_Long_IntegerVector;
+
+	package NaturalSet is new
+		Ada.Containers.Ordered_Sets
+			(
+			Element_Type => Natural 
+			);
+	use NaturalSet;
+
+	package SeedRangeVector is new
+		Ada.Containers.Vectors
+			(Index_Type => Natural,
+			Element_Type => SeedRange 
+			);
+	use SeedRangeVector;
+
 	state: StateMachine;
+	
+	values : Long_Long_IntegerVector.Vector;
 
 	procedure statemachine_proc(
 		capture: in Unbounded_String
 		)
 	is
-		current_number : Long_Integer := 0;
+		current_number : Long_Long_Integer := 0;
 		trimmed_string : Unbounded_String;
-		seed_rec : seed_range_record;
 	begin
 		trimmed_string := Trim(capture, To_Set(' '), To_Set(":;, "));
-		--Put_Line("Token: " & To_String(trimmed_string));
+		Put_Line("Token: " & To_String(trimmed_string) & " State: " & state'Image);
 		if trimmed_string = "" then
 			return;
 		end if;
 		case state is
-			when seeds =>
-				--Put_Line("seeds");
-				state := seed_start;
-			when seed_start =>
-				current_number := Long_Integer'Value(To_String(trimmed_string));
-				source := current_number;
-				--Put_Line("seed id: " & current_number'Image);
-				state := seed_range;
-			when seed_range =>
-				current_number := Long_Integer'Value(To_String(trimmed_string));
-				seed_rec := (
-						start => source,
-						range_end => source + current_number -1
-						);
-				insert(
-					container => seeds_current,
-					new_item => seed_rec
-					);
-				--Put_Line("seed id: " & current_number'Image);
-				state := seed_start;
-			when map_destination =>
-				current_number := Long_Integer'Value(To_String(trimmed_string));
-				destination := current_number;
-				--Put_Line("destination: " & current_number'Image);
-				state := map_source;
-			when map_source =>
-				current_number := Long_Integer'Value(To_String(trimmed_string));
-				source := current_number;
-				--Put_Line("source: " & current_number'Image);
-				state := map_range_length;
-			when map_range_length =>
-				current_number := Long_Integer'Value(To_String(trimmed_string));
-				source_end := source + current_number -1;
-				--Put_Line("range_length: " & current_number'Image);
+			when name =>
+				state := number;
+			when number =>
+				current_number := Long_Long_Integer'Value(To_String(trimmed_string));
+				values.append(current_number);
 		end case;
 	end statemachine_proc;
 
@@ -109,14 +105,12 @@ package body solutionpkp is
 		(capture: in Unbounded_String)
 	is
 		idx,idxl  : Natural := 1;
+		Search_Set : constant Character_Set := To_Set(" ,");
 	begin
-		destination := 0;
-		source := 0;
-		source_end := 0;
 		-- Capture destination data
 		idx := Index(
 			Source => capture,
-			Pattern => " ",
+			Set => Search_Set,
 			From => idx
 			);
 		while idx /= 0 loop
@@ -128,112 +122,162 @@ package body solutionpkp is
 			idxl := idx + 1;
 			idx := Index(
 				Source => capture,
-				Pattern => " ",
+				Set => Search_Set,
 				From => idx+1
 				);
 		end loop;
 		statemachine_proc(To_Unbounded_String(Slice(capture,idxl,Length(capture))));
 	end line_proc;
 
+    function LLI_to_SR(v: Long_Long_IntegerVector.Vector) return SeedRangeVector.Vector
+    is
+        idx: Natural := 0;
+        sr: SeedRange;
+        srv: SeedRangeVector.Vector;
+    begin
+        while idx < Natural(Length(v)) loop
+            sr.start_range := Element(v, idx);
+            sr.end_range := Element(v, idx+1) + sr.start_range -1;
+            idx := idx + 2;
+            Append(srv, sr);
+        end loop;
+        return srv;
+    end;
+
+    package SRSorter is new SeedRangeVector.Generic_Sorting;
+    procedure compactVector(v: in out SeedRangeVector.Vector)
+    is
+        idx : Natural;
+        e : SeedRange;
+        pe : SeedRange;
+    begin
+        SRSorter.Sort(v);
+        idx := 1;
+        e := Element(v, 0);
+        while idx < Natural(Length(v)) loop
+            pe := e;
+            e := Element(v, idx);
+
+            if pe.start_range <= e.start_range and pe.end_range >= e.start_range then
+                pe.end_range := Long_Long_Integer'Max(pe.end_range, e.end_range);
+                Delete(v, idx);
+                idx := idx -1;
+                e := pe;
+            end if;
+
+            idx := idx + 1;
+        end loop;
+    end compactVector;
 
 	procedure Main is
-		F         : File_Type;
-		File_Name : constant String := "input.txt";
+		F         : File_Type := Standard_Input;
 		str       : Unbounded_String;
-		seed_l   : seed_range_record;
-		seed_m   : seed_range_record;
-		seed_r   : seed_range_record;
+        t         : Transfomration;
+        t_values  : SeedRangeVector.Vector;
+        idx       : Natural;
+        e         : SeedRange;
+        te        : SeedRange;
+        srv       : SeedRangeVector.Vector;
+        hit_v     : NaturalSet.Set;
 	begin
-		Open (F, In_File, File_Name);
-		seeds_current.clear;
-		seeds_storage.clear;
-		state := seeds;
+        -- Read first line, the input
+        str := To_Unbounded_String(Get_Line (F));
+        Put_Line(To_String(str));
+        line_proc(str);
+
+        srv := LLI_to_SR(values);
+
+        compactVector(srv);
+        Put_Line("");
+        Put_Line("Vals:");
+        for V of srv loop
+            Put_Line("s: " & V.start_range'Image & " e: " & V.end_range'Image); 
+        end loop;
+        Put_Line("");
+
 		while not End_Of_File (F) loop
 			-- Capture the line
 			str := To_Unbounded_String(Get_Line (F));
-			--Put_Line(To_String(str));
 
-			if Index(str, "map", 1) > 0 then
-				Put_Line("New map " & To_String(str));
-				--seeds_storage.clear;
-				for s of seeds_mapped loop
-					Delete(seeds_storage,s);
-				end loop;
-				for s of seeds_current loop
-					seeds_storage.insert(s);
-				end loop;
-				seeds_current.clear;
-				seeds_mapped.clear;
-				state := map_destination;
-				Put_Line("Seed state");
-				for s of seeds_storage loop
-					Put_Line("seed: " & s.start'Image & " end: " & s.range_end'Image);
-				end loop;
-			else
-				line_proc(str);
-			end if;
+            if Index(str, "map", 1) > 0 then
+                Put_Line("");
+                Put_Line("");
+                Put_Line(To_String(str));
+                Put_Line("Map line!");
+                -- Clear all processed lines
+                for V of reverse hit_v loop
+                    --Put_Line("Delete: " & V'Image);
+                    Delete(srv, V);
+                end loop;
+                Clear(hit_v);
+                -- Add all elements in the transformed vector back
+                Append(srv, t_values);
+                -- Clear all values
+                Clear(t_values);
+                compactVector(srv);
+                for V of srv loop
+                    Put_Line("Vals s: " & V.start_range'Image & " e: " & V.end_range'Image); 
+                end loop;
+                Put_Line("");
+                Put_Line("Transforms:");
+            elsif Length(str) > 0 then
+                t := transformationFromString(str);
+                Put_Line("S: " & t.start_range'Image & " E: " & t.end_range'Image & " D: " & t.destination_start'Image);
 
+                idx := 0;
+                while idx < Natural(Length(srv)) loop
+                    e := Element(srv, idx);
+                    -- If e is in some way contained by t
+                    if Long_Long_Integer'Max(e.start_range, t.start_range) <= Long_Long_Integer'Min(e.end_range, t.end_range) then
+                        Put_Line("Hit! idx: " & idx'Image & " s: " & e.start_range'Image & " e: " & e.end_range'Image); 
+                        -- If e has range before the transform
+                        if e.start_range < t.start_range then
+                            --Put_Line("Start before");
+                            te.start_range := e.start_range;
+                            te.end_range := t.start_range-1;
+                            Append(t_values, te);
+                        end if;
 
-			if state = map_range_length then
-				--Put_Line("");
-				--Put_Line("Processing seeds through map");
-				Put_Line("D: " & destination'image & " S: " & source'image & " SE: " & source_end'image);
-				for s of seeds_storage loop
-					seed_m.start := s.start;
-					seed_m.range_end := s.range_end;
-					if not seeds_mapped.contains(s) and s.start < source_end and s.range_end > source then
-					--if s.start < source_end and s.range_end > source then
-						--Put_Line("Seed range start: " & s.start'Image & " end: " & s.range_end'Image);
-						-- If any kind of match
-						if s.start < source then
-							seed_l := (
-								start => s.start,
-								range_end => source -1
-								);
-							seed_m.start := source;
-							--Put_Line("Left map start: " & seed_l.start'Image & " end: " & seed_l.range_end'Image);
-							seeds_current.include(seed_l);
-						end if;
-						if s.range_end > source_end then
-							seed_m.range_end := source_end;
-							seed_r := (
-								start => source_end +1,
-								range_end => s.range_end
-								);
-							--Put_Line("Right map start: " & seed_r.start'Image & " end: " & seed_r.range_end'Image);
-							seeds_current.include(seed_r);
-						end if;
-						seed_m.start := seed_m.start - source + destination;
-						seed_m.range_end := seed_m.range_end - source + destination;
-						--Put_Line("Middle map start: " & seed_m.start'Image & " end: " & seed_m.range_end'Image);
-						--if seed_m.start = 0 then
-						--	Put_Line("FUCK!");
-						--end if;
-						-- Add mapping
-						seeds_current.include(seed_m);
-						-- Mark for deletion from sources
-						seeds_mapped.include(s);
-						--Put_Line("deleted seed: " & s.start'Image & " end: " & s.range_end'Image);
-					end if;
+                        -- e IS contained
+                        -- start is from e only if bigger than from t
+                        te.start_range := (if e.start_range > t.start_range then e.start_range else t.start_range) -t.start_range +t.destination_start;
+                        -- end is minimun of the two ends
+                        te.end_range := Long_Long_Integer'Min(e.end_range, t.end_range) -t.start_range +t.destination_start;
+                        Append(t_values, te);
 
-				end loop;
-				state := map_destination;
-			end if;
+                        -- If e has range after the transform
+                        if e.end_range > t.end_range then
+                            --Put_Line("End after");
+                            te.start_range := t.end_range+1;
+                            te.end_range := e.end_range;
+                            Append(t_values, te);
+                        end if;
+
+                        -- Remove element
+                        Include(hit_v, idx);
+                    else
+                        NULL;
+                        --Put_Line("NOT! s: " & e.start_range'Image & " e: " & e.end_range'Image); 
+                    end if;
+                    idx := idx + 1;
+                end loop;
+            end if;
 		end loop;
-		--seeds_storage.clear;
-		for s of seeds_mapped loop
-			Delete(seeds_storage,s);
-		end loop;
-		for s of seeds_current loop
-			seeds_storage.include(s);
-		end loop;
-		seeds_current.clear;
-		seeds_mapped.clear;
 
-		Put_Line("After map:");
-		for s of seeds_storage loop
-			Put_Line("seed: " & s.start'Image & " end: " & s.range_end'Image);
-		end loop;
+        Put_Line("");
+        Put_Line("");
+        Put_Line("Closing");
+        Append(srv, t_values);
+        compactVector(srv);
+        e := First_Element(srv);
+        for V of srv loop
+            Put_Line("s: " & V.start_range'Image & " e: " & V.end_range'Image); 
+            if v.start_range < e.start_range then
+                e := v;
+            end if;
+        end loop;
+        Put_Line("");
+        Put_Line("Result s: " & e.start_range'Image & " e: " & e.end_range'Image); 
 		Close (F);
 	end Main;
 end solutionpkp;
