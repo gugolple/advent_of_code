@@ -100,19 +100,15 @@ package body solutionpk is
 	function "<"(Left, Right: DijkstraStorage) return Boolean is
 		res : Boolean := False;
 	begin
-		if Left.cost < Right.cost then
-			res := True;
-		elsif Left.cost = Right.cost then
-			if Left.l < Right.l then
-				res := True;
-			elsif Left.l = Right.l then
-				if Left.dirSteps < Right.dirSteps then
-					res := True;
-				elsif Left.dirSteps = Right.dirSteps then
-					res := Left.d < Right.d;
-				end if;
-			end if;
-		end if;
+                if Left.l < Right.l then
+                        res := True;
+                elsif Left.l = Right.l then
+                        if Left.dirSteps < Right.dirSteps then
+                                res := True;
+                        elsif Left.dirSteps = Right.dirSteps then
+                                res := Left.d < Right.d;
+                        end if;
+                end if;
 		return res;
 	end;
 
