@@ -1,6 +1,15 @@
 #!/usr/bin/env python3
-import sys
-rows = sys.stdin.read().strip().split("\n")
+import sys, unittest
 
-for r in rows:
-    print(r)
+def main(iv):
+    print(iv)
+    return None
+
+# To run tests: "python -m unittest -v p1.py"
+class TestAdvent(unittest.TestCase):
+    def test_basic_4(self):
+        self.assertEqual(main(None) 0)
+
+if __name__ == "__main__":
+    rows = sys.stdin.read().strip()
+    print(main(rows))
