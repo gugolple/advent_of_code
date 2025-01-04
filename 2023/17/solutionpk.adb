@@ -137,7 +137,7 @@ package body solutionpk is
 			when Left => nl.col := l.col -1;
 			when Down => nl.row := l.row +1;
 			when Right => nl.col := l.col +1;
-			when others => null;
+			when others => Put_Line("ERROR!");
 		end case;
 		return nl;
 	end;
@@ -208,8 +208,6 @@ package body solutionpk is
 		current_dij.dirSteps := 0;
 		current_dij.d := None;
 
-		Put_Line("daf");
-
 		pendig_queue.Insert(current_dij);
 
 		Put_Line("Main loop");
@@ -239,7 +237,8 @@ package body solutionpk is
 								next_dij := new DijkstraStorage;
 								next_dij.cost := current_dij.cost + grid(nl.row)(nl.col);
 								next_dij.d := d;
-								next_dij.l := nl;
+								next_dij.l.row := nl.row;
+								next_dij.l.col := nl.col;
 								next_dij.dirSteps := 1;
 								if not Contains(pendig_queue, next_dij) then
 									Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
@@ -252,7 +251,8 @@ package body solutionpk is
 								next_dij := new DijkstraStorage;
 								next_dij.cost := current_dij.cost + grid(nl.row)(nl.col);
 								next_dij.d := d;
-								next_dij.l := nl;
+								next_dij.l.row := nl.row;
+								next_dij.l.col := nl.col;
 								next_dij.dirSteps := current_dij.dirSteps + 1;
 								if not Contains(pendig_queue, next_dij) then
 									Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
@@ -272,9 +272,17 @@ package body solutionpk is
 			end if;
 		end loop;
 
+		Put_Line("Traveled: " & Length(traveled)'Image);
 		while Length(traveled) > 0 loop
 			current_dij := First_Element(traveled);
 			Delete_First(traveled);
+			Free(current_dij);
+		end loop;
+
+		Put_Line("Pending queue: " & Length(pendig_queue)'Image);
+		while Length(pendig_queue) > 0 loop
+			current_dij := First_Element(pendig_queue);
+			Delete_First(pendig_queue);
 			Free(current_dij);
 		end loop;
 
