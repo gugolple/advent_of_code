@@ -3,7 +3,9 @@ import sys, unittest
 import re
 
 def is_valid(case, rules, rule_id=0, pos=0):
-    #print("p", pos, "r", rule_id, rules[rule_id])
+    print("p", pos, "r", rule_id, rules[rule_id])
+    if pos == len(case):
+        return False, None
     for pr in rules[rule_id]:
         np = 0
         for r in pr:
@@ -12,22 +14,17 @@ def is_valid(case, rules, rule_id=0, pos=0):
                 if not res:
                     break
                 np += idx
-                if (pos+np) == len(case):
-                    return True, np
             else:
-                if case[pos:].startswith(r):
-                    #print("Accepted:", pos, np, r, case[pos+np])
-                    return True, len(r)
-                else:
-                    #print("Failed:", pos, np, r, case[pos+np])
+                if not case[pos:].startswith(r):
+                    print("Failed:", pos, np, r, case[pos+np])
                     break
-            #print("Accepted:", pos, np, pr)
+            print("Accepted:", pos, np, pr)
         else:
-            #print("Good:", pos, np, rule_id)
+            print("Good:", pos, np, rule_id)
             if rule_id != 0 or np == len(case):
                 return True, np
 
-    #print("FAIL", pos, np, r, case[pos+np])
+    print("FAIL", pos, np, r, case[pos+np])
     return False, None
 
 
@@ -86,22 +83,8 @@ class TestAdvent(unittest.TestCase):
 7: 14 5 | 1 21
 24: 14 1
 
-abbbbbabbbaaaababbaabbbbabababbbabbbbbbabaaaa
-bbabbbbaabaabba
-babbbbaabbbbbabbbbbbaabaaabaaa
-aaabbbbbbaaaabaababaabababbabaaabbababababaaa
-bbbbbbbaaaabbbbaaabbabaaa
-bbbababbbbaaaaaaaabbababaaababaabab
-ababaaaaaabaaab
-ababaaaaabbbaba
-baabbaaaabbaaaababbaababb
-abbbbabbbbaaaababbbbbbaaaababb
-aaaaabbaabaaaaababaa
-aaaabbaaaabbaaa
-aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
-babaaabbbaaabaababbaabababaaab
-aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba"""
-        self.assertEqual(main(iv), 12)
+aaaabbaaaabbaaa"""
+        self.assertEqual(main(iv), 0)
 
     def test_basic_2(self):
         iv = """42: 9 14 | 10 1
@@ -136,8 +119,22 @@ aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba"""
 7: 14 5 | 1 21
 24: 14 1
 
-aaaabbaaaabbaaa"""
-        self.assertEqual(main(iv), 0)
+abbbbbabbbaaaababbaabbbbabababbbabbbbbbabaaaa
+bbabbbbaabaabba
+babbbbaabbbbbabbbbbbaabaaabaaa
+aaabbbbbbaaaabaababaabababbabaaabbababababaaa
+bbbbbbbaaaabbbbaaabbabaaa
+bbbababbbbaaaaaaaabbababaaababaabab
+ababaaaaaabaaab
+ababaaaaabbbaba
+baabbaaaabbaaaababbaababb
+abbbbabbbbaaaababbbbbbaaaababb
+aaaaabbaabaaaaababaa
+aaaabbaaaabbaaa
+aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
+babaaabbbaaabaababbaabababaaab
+aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba"""
+        self.assertEqual(main(iv), 12)
 
 
 if __name__ == "__main__":
