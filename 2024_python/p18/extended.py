@@ -52,7 +52,7 @@ def get_best_path(seen, orig, tgt, l, pth=None):
         pth = deque()
     if l == orig:
         return pth
-    print(l)
+    #print(l)
     for m in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         # Next location
         nl = add_pos(l, m)
@@ -73,11 +73,11 @@ def entry_func(inp, tgt):
     path = None
     for lim in range(len(blocks_list)):
         lb = blocks_list[lim-1]
-        print(lim, lb)
         if path is not None:
             if lb not in path:
-                print("Cache!")
+                #print("Cache!")
                 continue
+        print(lim, lb)
         blocks = set(blocks_list[:lim])
         tot, seen = walk_path_dijstra(blocks, tgt)
         if tot == 0:
@@ -85,7 +85,7 @@ def entry_func(inp, tgt):
             print("fail at elem", lim-1, res)
             break
         path = set(get_best_path(seen, (0, 0), tgt, tgt))
-        print_mat_set(path, tgt, 'O')
+        #print_mat_set(path, tgt, 'O')
     return res
 
 if __name__ == "__main__":
