@@ -46,13 +46,7 @@ def main(iv):
     repeated = False
     while len(p1) > 0 and len(p2) > 0:
         tp = (tuple(p1), tuple(p2))
-        if tp in seen:
-            print("Repeated!")
-            v1, v2 = p1.popleft(), p2.popleft()
-            print("P1")
-            p1.append(v1)
-            p1.append(v2)
-        elif len(p1) > p1[0] and len(p2) > p2[0]:
+        if len(p1) > p1[0] and len(p2) > p2[0]:
             print(p1)
             print(p2)
             if recurse(copy.copy(p1), copy.copy(p2), seen):
@@ -65,6 +59,12 @@ def main(iv):
                 print("P2")
                 p2.append(v2)
                 p2.append(v1)
+        elif tp in seen:
+            print("Repeated!")
+            v1, v2 = p1.popleft(), p2.popleft()
+            print("P1")
+            p1.append(v1)
+            p1.append(v2)
         else:
             seen.add(tp)
             p1, p2 = round(p1, p2)
