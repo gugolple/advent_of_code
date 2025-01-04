@@ -1,6 +1,16 @@
 import unittest, sys
 from collections import deque
 
+# They key is the amount of sides is EQUAL to the amount of corners.
+# From that you have to check in a procedural way for all corners.
+# They key difficulty was the double corners.
+# Due to my layout, I check the 4 corners of any spot, and from there
+# you must check the possibility of a double corner in the same area,
+# done by testing if both sides (although same letter) has been seen.
+# A position is added to seen as first step of the cycle after the
+# check if it was seen before.
+
+
 def print_mat(mat):
     for r in mat:
         print(r)
