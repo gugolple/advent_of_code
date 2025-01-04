@@ -4,7 +4,7 @@ This is my small repo just solving the challenges in rust. A lot of fun!.
 
 # Execution
 
-The makefile has been setted up such that one can execute all the code within a
+The **Makefile** has been setted up such that one can execute all the code within a
 podman instance. This negates the requirement for setting up rust.
 
 The following commands are currently accepted:
