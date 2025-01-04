@@ -1,5 +1,4 @@
 with Ada.Text_IO; use Ada.Text_IO;
-with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
 with Ada.Strings.Maps; use Ada.Strings.Maps;
 with Ada.Unchecked_Deallocation;
 
@@ -141,8 +140,6 @@ package body solutionpk is
 	use DijkstraStorage_Interface;
 
 	function GetPriority(E: DijkstraStorage_Holder.Holder) return Long_Integer is
-            MAX_SIZE : constant Long_Integer := 1000;
-            MAX_STEPS : constant Long_Integer := 10;
             result : Long_Integer;
 	begin
                 result := Long_Integer(E.Element.Cost);
@@ -222,8 +219,9 @@ package body solutionpk is
 
 	function process_line(str: Unbounded_String) return IntegerVector_Access
 	is
-		iv : IntegerVector_Access := new IntegerVector.Vector;
+		iv : IntegerVector_Access := null;
 	begin
+		iv := new IntegerVector.Vector;
 		for I in 1 .. Length(str) loop
 			iv.append(Integer'Value(Slice(str, I, I)));
 		end loop;
@@ -233,10 +231,10 @@ package body solutionpk is
 	function BestRoute(grid: IntegerVectorVector.Vector ) return Integer
 	is
 		LIMIT_STRAIGHT : constant Integer := 3;
+                iterations : Long_Integer := 0;
 		grid_totals : IntegerVectorVector.Vector;
 		nl : Location;
 		td : Direction;
-		best_val : Integer := Integer'Last; 
                 hold_val : DijkstraStorage_Holder.Holder;
 		current_dij, next_dij: DijkstraStorage_Access;
 		traveled : DijkstraStorageSet.Set;
@@ -257,6 +255,7 @@ package body solutionpk is
 		Put_Line("Main loop");
 		-- Main loop
 		loop
+                        iterations := iterations + 1;
                         pendig_queue.Dequeue(hold_val);
                         current_dij := Element(hold_val);
                         Clear(hold_val);
@@ -315,15 +314,15 @@ package body solutionpk is
 			Free(current_dij);
 		end loop;
 
-		--Put_Line("Pending queue: " & Length(pendig_queue)'Image);
-		--while Length(pendig_queue) > 0 loop
-		--	current_dij := First_Element(pendig_queue);
-		--	Delete_First(pendig_queue);
-		--	Free(current_dij);
-		--end loop;
+		Put_Line("Pending queue: " & Peak_Use(pendig_queue)'Image);
+		while Current_Use(pendig_queue) > 0 loop
+                        pendig_queue.Dequeue(hold_val);
+                        current_dij := Element(hold_val);
+                        Clear(hold_val);
+			Free(current_dij);
+		end loop;
 
-		Put_Line("ResultPath");
-		PrintGrid(grid_totals);
+		Put_Line("Iterations: " & iterations'Image);
 		return res;
 	end;
 
@@ -347,8 +346,6 @@ package body solutionpk is
 		Put_Line("Input: ");
 		PrintGrid(grid);
 		total := BestRoute(grid);
-		Put_Line("Input: ");
-		PrintGrid(grid);
 		Put_Line("Total: " & total'Image);
 	end Main;
 end solutionpk;
