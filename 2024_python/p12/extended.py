@@ -34,38 +34,59 @@ non_corner_checks = [
         (True, True, True, True),
         (False, False, False, False)
         ]
-def check_corner(mat_dict, pos, my_let):
+
+def test_mat_dict(mat_dict, pos, my_letter):
+    if pos not in mat_dict or mat_dict[pos] != my_letter:
+        return False
+    return True
+
+def check_corner(mat_dict, seen, pos, my_let):
     #print("Check corner", pos)
     check_list = []
     cr, cc = pos
     for nr, nc in [(cr-1, cc-1), (cr-1, cc), (cr, cc-1), (cr, cc)]:
         np = (nr, nc)
         #print("Checked corner ref", np)
-        if np not in mat_dict or mat_dict[np] != my_let:
-            check_list.append(False)
-        else:
-            check_list.append(True)
-    res = True
+        check_list.append(test_mat_dict(mat_dict, np, my_let))
+    res = 1
     for ncc in non_corner_checks:
         if compare_lists(check_list, ncc):
-            res = False
+            res = 0
             break
+    # TL and BR
+    if compare_lists(check_list, (True, False, False, True)):
+        tlp = (cr-1, cc-1)
+        brp = pos
+        if tlp in seen and brp in seen:
+            tl = test_mat_dict(mat_dict, tlp, my_let)
+            br = test_mat_dict(mat_dict, brp, my_let)
+            print("Double compare tlbr", tl, br)
+            if tl and br:
+                res = 2
+    # TR and BL
+    if compare_lists(check_list, (False, True, True, False)):
+        trp = (cr-1, cc)
+        blp = (cr, cc-1)
+        if trp in seen and blp in seen:
+            tr = test_mat_dict(mat_dict, trp, my_let)
+            bl = test_mat_dict(mat_dict, blp, my_let)
+            print("Double compare trbl", tr, bl)
+            if tr and bl:
+                res = 2
     return res
 
 
 
-def check_corners_around(mat_dict, corners_seen, pos):
+def check_corners_around(mat_dict, seen, pos):
     cr, cc = pos
-    corners_found = set()
+    corners_found = list()
     # We move bottom and right, only positive.
     # We check top and left
     for nr, nc in [(cr, cc), (cr, cc+1), (cr+1, cc), (cr+1, cc+1)]:
         np = (nr, nc)
-        if np in corners_seen:
-            continue
-        corners_seen.add(np)
-        if check_corner(mat_dict, np, mat_dict[pos]):
-            corners_found.add(np)
+        rcc = check_corner(mat_dict, seen, np, mat_dict[pos])
+        if rcc > 0:
+            corners_found.append((np, rcc))
     return corners_found
 
 
@@ -78,14 +99,14 @@ def walk_area(mat, start):
             mat_dict[(ridx, cidx)] = e
     area = 0
     seen = set()
-    corners = set()
-    corners_seen = set()
+    corners = dict()
     my_letter = get_pos(mat, start)
     pending = deque([start])
     while len(pending)>0:
         cur = pending.popleft()
         if cur in seen:
             continue
+        seen.add(cur)
         cr, cc = cur
         for nr, nc in [(cr-1, cc), (cr+1, cc), (cr, cc-1), (cr, cc+1)]:
             if nr < 0 or nc < 0 or nr >= rows or nc >= cols:
@@ -96,17 +117,18 @@ def walk_area(mat, start):
                 continue
             elif get_pos(mat, (nr, nc)) != '.':
                 pending.append((nr, nc))
-        new_corners = check_corners_around(mat_dict, corners_seen, cur)
-        for cor in new_corners:
-            corners.add(cor)
+        new_corners = check_corners_around(mat_dict, seen, cur)
+        for cor, cv in new_corners:
+            if cor not in corners or corners[cor] < cv:
+                corners[cor] = cv
         print("walk", cur, get_pos(mat, cur), "new corners", len(new_corners))
         area += 1
         set_pos(mat, cur, '.')
-        seen.add(cur)
     print(my_letter, area, len(corners))
     print("Matrix dictionary", mat_dict)
-    print("Corners seen", corners_seen)
-    return area * len(corners)
+    corners_val = sum(corners.values())
+    print("Corners", corners_val)
+    return area * corners_val 
 
 
 def entry_func(inp: str):
