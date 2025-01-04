@@ -1,6 +1,6 @@
 import unittest, sys
 from enum import Enum
-from itertools import pairwise
+from itertools import pairwise, product
 
 INV = '#'
 
@@ -52,30 +52,30 @@ def recurse_path(mat, matd, l, d, c=0, ld='', seen=None):
         seen = dict()
     if l == d:
         # Add an A pulse to the end
-        return c, [l], ['A']
+        return c, [['A']]
     if l in seen and seen[l] < c:
         return None
     seen[l] = c
     best = 0
-    best_path = None
     best_pathact = None
     for m, act in [((-1, 0), '^'), ((1, 0), 'v'), ((0, -1), '<'), ((0, 1), '>')]:
         nl = add_pos(l, m)
         if location_valid(matd, nl) and get_mat(mat, nl) != '#':
             nc = c+1
-            if ld != act:
-                nc += 100
             res = recurse_path(mat, matd, nl, d, nc, act, seen)
             if res is not None:
-                cst, path, pathact = res
-                if best == 0 or cst < best:
+                cst, pathact = res
+                if best == 0 or best > cst:
                     best = cst
-                    path.append(l)
-                    pathact.append(act)
-                    best_path = path
+                    for pa in pathact:
+                        pa.append(act)
                     best_pathact = pathact
+                elif best == cst:
+                    for pa in pathact:
+                        pa.append(act)
+                    best_pathact.extend(pathact)
     if best > 0:
-        return best, best_path, best_pathact
+        return best, best_pathact
     return None
 
 def calculate_costs(mat):
@@ -100,47 +100,88 @@ def calculate_costs(mat):
             #print("Test path", s, sd, d, dd)
             res = recurse_path(mat, matd, s, d)
             if res is not None:
-                c, path, pathact = res
-                path = "".join([get_mat(mat, i) for i in reversed(path)])
-                pathact = "".join(reversed(pathact))
+                c, pathact = res
+                tpa = ["".join(reversed(pa)) for pa in pathact]
                 #print(c, path, pathact)
-                orgdestcost[sddd] = pathact
+                orgdestcost[sddd] = tpa
     return orgdestcost
 
 numpad_costs = calculate_costs(numpad)
-print(numpad_costs)
+#print(numpad_costs)
 dirpad_costs = calculate_costs(dirpad)
-print(dirpad_costs)
+#print(dirpad_costs)
 
-def numpad_costs_solv(linp):
-    lp = ['A']
-    lp.extend(linp)
-    for o, d in pairwise(lp):
-        od = (o, d)
-        npc = numpad_costs[od]
-        print("NP", o, d, "--", npc)
-        yield npc
+def collapse_possibilities(ps):
+    # This is absolutely dark magic, but tremendously useful
+    # This operations return all the possibilities as strings
+    return ["".join(x) for x in product(*ps)]
 
-def dirpad_costs_solv(linp, f=False):
-    tb = ""
-    if f:
-        tb = "----"
+def dirpad_costs_solv(linp):
+    #print("DP", linp)
+    tb = "--"
     o = 'A'
+    ps = []
     for sd in linp:
         #print("Path", sd)
         for d in list(sd):
             od = (o, d)
             dpc = dirpad_costs[od]
-            print(tb, "DP", o, d, "--", dpc)
-            yield dpc
+            #print(tb, "DP", o, d, "--", dpc)
+            ps.append(dpc)
             o = d
+    #print(ps)
+    act_ans = collapse_possibilities(ps)
+    #print(act_ans)
+    return act_ans
+
+def numpad_costs_solv(linp):
+    #print("NP", linp)
+    lp = ['A']
+    lp.extend(linp)
+    ps = []
+    for o, d in pairwise(lp):
+        od = (o, d)
+        # This is only for numpad logic
+        ps.append(numpad_costs[od])
+    #print(ps)
+    act_ans = collapse_possibilities(ps)
+    #print(act_ans)
+    return act_ans
+
+def calculate_costs(ot, rl):
+    return int(ot[:-1]) * len(rl)
+
+def solv_calculate_costs(linp, depth):
+    possol = set(numpad_costs_solv(linp))
+    cbscr = 0
+    for dth in range(1, depth):
+        #print(dth)
+        cbscr = float("inf")
+        cbsol = None
+        for prevpossol in possol:
+            nextpossol = dirpad_costs_solv(prevpossol)
+            for pnps in nextpossol:
+                cv = calculate_costs(linp, pnps)
+                if cv < cbscr:
+                    cbscr = cv
+                    cbsol = set([pnps])
+                elif cv == cbscr:
+                    cbsol.add(pnps)
+        #print(cbscr)
+        #print_mat(cbsol)
+        possol = cbsol
+    return cbscr
+
+def stringify(f):
+    l = list()
+    for r in f:
+        l.append(r)
+    return "".join(l)
 
 def entry_func(inp: str):
     tot = 0
     for cmd in inp.split("\n"):
-        res = "".join(dirpad_costs_solv(dirpad_costs_solv(numpad_costs_solv(cmd)), f=True))
-        cres = len(res)
-        print(cmd, cres, res)
+        tot += solv_calculate_costs(cmd, 3)
     return tot
 
 if __name__ == "__main__":
@@ -148,27 +189,28 @@ if __name__ == "__main__":
     print(entry_func(inp_str[:-1]))
 
 class AllTestCase(unittest.TestCase):
-    def test_example_ncs(self):
+    def test_ncs(self):
         inp_str = """029A"""
-        self.assertEqual("".join(numpad_costs_solv(list(inp_str))), "<A^A^^>AvvvA")
+        self.assertEqual(numpad_costs_solv(list(inp_str))[0], "<A^A^^>AvvvA")
 
-    def test_example_dps(self):
+    def test_dps(self):
         inp_str = """029A"""
-        self.assertEqual("".join(dirpad_costs_solv(numpad_costs_solv(inp_str))), "v<<A>^>A<A>A<AAv>A^Av<AAA^>A")
+        self.assertEqual(dirpad_costs_solv(numpad_costs_solv(inp_str)[0])[0], "v<<A>^>A<A>A<AAv>A^Av<AAA^>A")
 
-    def test_example_ddps(self):
+    def test_ddps(self):
         inp_str = """029A: <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
 980A: <v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A
 179A: <v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A
 456A: <v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A
 379A: <v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A"""
         for l in inp_str.split("\n"):
-            iv, rv = l.split(": ")
-            actres = "".join(dirpad_costs_solv(dirpad_costs_solv(numpad_costs_solv(iv)), f=True))
-            print(iv)
-            print(rv)
+            iv, sv = l.split(": ")
+            ccv = calculate_costs(iv, sv)
+            actres = solv_calculate_costs(iv, 3)
+            print(iv, "-", ccv)
+            print(sv)
             print(actres)
-            self.assertEqual(len(actres), len(rv))
+            self.assertEqual(actres, ccv)
 
     def test_example(self):
         inp_str = """029A
