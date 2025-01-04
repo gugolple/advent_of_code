@@ -254,7 +254,11 @@ package body solutionpkp is
                         end if;
 
                         -- Remove element
-                        Include(hit_v, idx);
+                        --Include(hit_v, idx);
+                        Delete(srv, idx);
+                        if idx > 0 then
+                            idx := idx -1;
+                        end if;
                     else
                         NULL;
                         --Put_Line("NOT! s: " & e.start_range'Image & " e: " & e.end_range'Image); 
