@@ -86,7 +86,7 @@ def entry_func(inp, tgt):
             break
         path = set(get_best_path(seen, (0, 0), tgt, tgt))
         #print_mat_set(path, tgt, 'O')
-    return res
+    return ",".join([str(i) for i in res])
 
 if __name__ == "__main__":
     inp_str = sys.stdin.read()
