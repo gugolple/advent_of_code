@@ -67,6 +67,8 @@ def walk_path_dijstra(mat, start_loc_or):
                 best = c
         if (l, o) in seen:
             continue
+        if best != 0 and c > best:
+            continue
         seen.add((l, o))
         print(c, l, o)
         for m, no in [((-1, 0), Or.N), ((1, 0), Or.S), ((0, -1), Or.W), ((0, 1), Or.E)]:
