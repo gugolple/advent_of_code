@@ -9,7 +9,7 @@ def search_starts(mat):
 def move_possible(mat, pos, npos):
     vpos = mat[pos[0]][pos[1]]
     vnpos = mat[npos[0]][npos[1]]
-    if vpos == vnpos or (vpos+1) == vnpos:
+    if (vpos+1) == vnpos:
         return True
     return False
 
