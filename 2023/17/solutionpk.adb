@@ -101,10 +101,10 @@ package body solutionpk is
 			if Left.l < Right.l then
 				res := True;
 			elsif Left.l = Right.l then
-				if Left.d < Right.d then
+				if Left.dirSteps < Right.dirSteps then
 					res := True;
-				elsif Left.d = Right.d then
-					res := Left.dirSteps < Right.dirSteps;
+				elsif Left.dirSteps = Right.dirSteps then
+					res := Left.d < Right.d;
 				end if;
 			end if;
 		end if;
@@ -191,12 +191,11 @@ package body solutionpk is
 	is
 		LIMIT_STRAIGHT : constant Integer := 2;
 		grid_totals : IntegerVectorVector.Vector;
-		l : Location_Access;
 		nl : Location;
 		td : Direction;
 		best_val : Integer := Integer'Last; 
 		current_dij, next_dij: DijkstraStorage_Access;
-		traveled : LocationSet.Set;
+		traveled : DijkstraStorageSet.Set;
 		pendig_queue : DijkstraStorageSet.Set;
 		res : Integer := 0;
 	begin
@@ -209,6 +208,8 @@ package body solutionpk is
 		current_dij.dirSteps := 0;
 		current_dij.d := None;
 
+		Put_Line("daf");
+
 		pendig_queue.Insert(current_dij);
 
 		Put_Line("Main loop");
@@ -216,18 +217,16 @@ package body solutionpk is
 		while Length(pendig_queue) > 0 loop
 			current_dij := First_Element(pendig_queue);
 			Delete_First(pendig_queue);
-			l := new Location;
-			l.all := current_dij.l;
-
-			if l.row = Integer(Length(grid)-1) and l.col = Integer(Length(grid(0).all)-1) then
+			if current_dij.l.row = Integer(Length(grid)-1) and current_dij.l.col = Integer(Length(grid(0).all)-1) then
 				res := current_dij.cost;
+				Free(current_dij);
 				exit;
 			end if;
 			-- Only if not processed
-			if not Contains(traveled, l) then
-				traveled.Insert(l);
+			if not Contains(traveled, current_dij) and (grid_totals(current_dij.l.row)(current_dij.l.col) > current_dij.cost or grid_totals(current_dij.l.row)(current_dij.l.col)=0) then
+				traveled.Insert(current_dij);
 				grid_totals(current_dij.l.row)(current_dij.l.col) := current_dij.cost;
-				Put_Line("Loc row: " & l.row'Image & " col: " & l.col'Image & " cost: " & current_dij.cost'Image);
+				Put_Line("Loc row: " & current_dij.l.row'Image & " col: " & current_dij.l.col'Image & " cost: " & current_dij.cost'Image);
 				-- All other locations
 				for d in DirectionValid'First .. DirectionValid'Last loop
 					td := Opposite(d);
@@ -242,8 +241,12 @@ package body solutionpk is
 								next_dij.d := d;
 								next_dij.l := nl;
 								next_dij.dirSteps := 1;
-								Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
-								pendig_queue.Insert(next_dij);
+								if not Contains(pendig_queue, next_dij) then
+									Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
+									pendig_queue.Insert(next_dij);
+								else
+									Free(next_dij);
+								end if;
 							elsif d = current_dij.d and current_dij.dirSteps < LIMIT_STRAIGHT then
 								--Put_Line("Steps valid");
 								next_dij := new DijkstraStorage;
@@ -251,8 +254,12 @@ package body solutionpk is
 								next_dij.d := d;
 								next_dij.l := nl;
 								next_dij.dirSteps := current_dij.dirSteps + 1;
-								Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
-								pendig_queue.Insert(next_dij);
+								if not Contains(pendig_queue, next_dij) then
+									Put_Line("Nextdij dir: " & d'Image & " row: " & nl.row'Image & " col: " & nl.col'Image & " cost: " & next_dij.cost'Image);
+									pendig_queue.Insert(next_dij);
+								else
+									Free(next_dij);
+								end if;
 
 							end if;
 						end if;
@@ -260,14 +267,15 @@ package body solutionpk is
 				end loop;
 				Put_Line("ResultPath");
 				PrintGrid(grid_totals);
+			else
+				Free(current_dij);
 			end if;
-			Free(current_dij);
 		end loop;
 
 		while Length(traveled) > 0 loop
-			l := First_Element(traveled);
+			current_dij := First_Element(traveled);
 			Delete_First(traveled);
-			Free(l);
+			Free(current_dij);
 		end loop;
 
 		Put_Line("ResultPath");
