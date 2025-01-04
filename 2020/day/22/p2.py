@@ -19,34 +19,19 @@ def round(p1, p2):
 
 
 def recurse(p1, p2, seen):
-    print("recurse")
+    first_entry = True
+    print(p1)
+    print(p2)
     while len(p1) > 0 and len(p2) > 0:
         tp = (tuple(p1), tuple(p2))
         if tp in seen:
             print("Repeated!")
-            return True
-        seen.add(tp)
-        p1, p2 = round(p1, p2)
-    fq = False
-    if len(p1) > 0:
-        fq = True
-    return fq
-    # P1 True
-    # P2 False
-
-
-def main(iv):
-    seen = set()
-    print()
-    sid = iv.split("\n\n")
-    p1 = deque([int(i) for i in sid[0].split("\n")[1:]])
-    p2 = deque([int(i) for i in sid[1].split("\n")[1:]])
-    print(p1)
-    print(p2)
-    repeated = False
-    while len(p1) > 0 and len(p2) > 0:
-        tp = (tuple(p1), tuple(p2))
-        if len(p1) > p1[0] and len(p2) > p2[0]:
+            v1, v2 = p1.popleft(), p2.popleft()
+            print("P1")
+            p1.append(v1)
+            p1.append(v2)
+        elif len(p1) > p1[0] and len(p2) > p2[0] and not first_entry:
+            print("Recursioooooon!")
             print(p1)
             print(p2)
             if recurse(copy.copy(p1), copy.copy(p2), seen):
@@ -59,21 +44,42 @@ def main(iv):
                 print("P2")
                 p2.append(v2)
                 p2.append(v1)
-        elif tp in seen:
-            print("Repeated!")
-            v1, v2 = p1.popleft(), p2.popleft()
-            print("P1")
-            p1.append(v1)
-            p1.append(v2)
         else:
             seen.add(tp)
             p1, p2 = round(p1, p2)
+        first_entry = False
+    # P1 True
+    # P2 False
+    if len(p2) == 0:
+        return True
+    elif len(p1) == 0:
+        return False
+    else:
+        print("MASTER SYSTEM FAILURE")
+        exit(1)
+    return None
+
+
+def main(iv):
+    seen = set()
+    print()
+    sid = iv.split("\n\n")
+    p1 = deque([int(i) for i in sid[0].split("\n")[1:]])
+    p2 = deque([int(i) for i in sid[1].split("\n")[1:]])
+
+    res = recurse(p1, p2, seen)
+
+    print("Final ret", res)
 
     fq = None
-    if len(p1) > 0 or repeated:
+    if len(p2) == 0:
         fq = p1
-    else:
+    elif len(p1) == 0:
         fq = p2
+    else:
+        print("MASTER SYSTEM FAILURE")
+        exit(1)
+
     print(f"Winner: {fq}")
     fq = list(reversed(fq))
     total = reduce(lambda x, y: x + y[0] * y[1], enumerate(fq, 1), 0)
