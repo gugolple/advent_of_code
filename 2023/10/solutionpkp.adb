@@ -4,16 +4,31 @@ with Ada.Strings.Maps; use Ada.Strings.Maps;
 
 with Ada.Containers; use Ada.Containers;
 with Ada.Containers.Vectors;
+with Ada.Containers.Ordered_Sets;
 
 with solutionpkp; use solutionpkp;
 
 package body solutionpkp is
+	valid_positions : Character_Set := To_Set("|-LJ7F. ");
+	count_positions : Character_Set := To_Set("|-LJ7F.");
 	MOV_STEP : constant Integer := 2;
 	
 	package Unbounded_StringVector is new
 		Ada.Containers.Vectors
 			(Index_Type => Natural,
 			Element_Type => Unbounded_String 
+			);
+
+	type Location is record
+		Row : Integer;
+		Col : Integer;
+	end record;
+	type Location_Access is access Location;
+
+	package LocationVector is new
+		Ada.Containers.Vectors
+			(Index_Type => Natural,
+			Element_Type => Location
 			);
 
 	type DirectionLocation is record
@@ -98,13 +113,20 @@ package body solutionpkp is
 		statemachine_proc(To_Unbounded_String(Slice(capture,idxl,Length(capture))));
 	end line_proc;
 
+	procedure MarkLocation(dl: Location; char: Character)
+	is
+		current_line : Unbounded_String;
+	begin
+		if not Is_In(Element(grid(dl.row), dl.col), To_set('B')) then
+			Replace_Element(grid(dl.row), dl.col, char);
+		end if;
+	end;
+
 	procedure MarkPosition(dl: DirectionLocation; char: Character)
 	is
 		current_line : Unbounded_String;
 	begin
-		current_line := grid(dl.row);
-		Replace_Element(current_line, dl.column, char);
-		Unbounded_StringVector.Replace_Element(grid, dl.row, current_line);
+		Replace_Element(grid(dl.row), dl.column, char);
 	end;
 
 	procedure MarkPositionDLV(dlv: DirectionLocationVector.Vector)
@@ -136,20 +158,36 @@ package body solutionpkp is
 		case dl.dir is
 			when North => 
 				if dl.row >= MOV_STEP then
-					ndl.row := dl.row -MOV_STEP;
+					for I in 0..MOV_STEP-1 loop
+						ndl.row := dl.row -I;
+						MarkPosition(ndl, 'B');
+					end loop;
+					ndl.row := dl.row - MOV_STEP;
 				end if;
 			when South => 
 				if dl.row <= Integer(Unbounded_StringVector.Length(grid)) -MOV_STEP then
-					ndl.row := dl.row +MOV_STEP;
+					for I in 0..MOV_STEP-1 loop
+						ndl.row := dl.row +I;
+						MarkPosition(ndl, 'B');
+					end loop;
+					ndl.row := dl.row + MOV_STEP;
 				end if;
 			when West => 
 				-- Idx starts at 1
 				if dl.column > MOV_STEP then
-					ndl.column := dl.column -MOV_STEP;
+					for I in 0..MOV_STEP-1 loop
+						ndl.column := dl.column -I;
+						MarkPosition(ndl, 'B');
+					end loop;
+					ndl.column := dl.column - MOV_STEP;
 				end if;
 			when East => 
 				if dl.column <= (Length(grid(0)) -MOV_STEP) then
-					ndl.column := dl.column +MOV_STEP;
+					for I in 0..MOV_STEP-1 loop
+						ndl.column := dl.column +I;
+						MarkPosition(ndl, 'B');
+					end loop;
+					ndl.column := dl.column + MOV_STEP;
 				end if;
 			when others =>
 				ndl.dir := Invalid;
@@ -262,6 +300,7 @@ package body solutionpkp is
 		Put_Line("");
 		Put_Line("Input");
 		while not finish loop
+			Put_Line("Loop?");
 			idx := 0;
 			for J in DirectionLocationVector.First_Index(next_steps) .. DirectionLocationVector.Last_Index(next_steps) loop
 				step := next_steps(J);
@@ -273,6 +312,7 @@ package body solutionpkp is
 					if K /= J then
 						loop_dl := next_steps(K);
 						if loop_dl.row = next_dl.row and loop_dl.column = next_dl.column then
+							MarkPosition(next_dl, 'B');
 							if next_dl.count = loop_dl.count then
 								steps := next_dl.count;
 							else
@@ -296,6 +336,175 @@ package body solutionpkp is
 		Put_Line("Result: " & steps'Image);
 	end WalkGrid;
 
+	function BordersWall(l: location) return boolean
+	is
+		res: boolean := False;
+	begin
+		if l.row = 0 then
+			res := True;
+		end if;
+		if l.row = Integer(Unbounded_StringVector.Length(grid))-1 then
+			res := True;
+		end if;
+		if l.col = 1 then
+			res := True;
+		end if;
+		if l.col = Length(grid(0)) then
+			res := True;
+		end if;
+		return res;
+	end BordersWall;
+
+
+	function CanMarkAround(l: location) return Boolean 
+	is
+		ml : location;
+		res : Boolean := False;
+	begin
+		ml.col := l.col;
+		if l.row > 0 then
+			ml.row := l.row -1;
+			if Is_In(Element(grid(ml.row), ml.col), valid_positions) then
+				res := True;
+			end if;
+		end if;
+		if l.row < Integer(Unbounded_StringVector.Length(grid))-1 then
+			ml.row := l.row +1;
+			if Is_In(Element(grid(ml.row), ml.col), valid_positions) then
+				res := True;
+			end if;
+		end if;
+		ml.row := l.row;
+		if l.col > 1 then
+			ml.col := l.col -1;
+			if Is_In(Element(grid(ml.row), ml.col), valid_positions) then
+				res := True;
+			end if;
+		end if;
+		if l.col < Length(grid(0)) then
+			ml.col := l.col +1;
+			if Is_In(Element(grid(ml.row), ml.col), valid_positions) then
+				res := True;
+			end if;
+		end if;
+		return res;
+	end CanMarkAround;
+
+
+	function CountMarkAround(l: location) return Integer
+	is
+		ml : location;
+		total : Integer := 0;
+	begin
+		ml.col := l.col;
+		if l.row > 0 then
+			ml.row := l.row -1;
+			if Is_In(Element(grid(ml.row), ml.col), count_positions) then
+				total := total + 1;
+			end if;
+			MarkLocation(ml,'X');
+		end if;
+		if l.row < Integer(Unbounded_StringVector.Length(grid))-1 then
+			ml.row := l.row +1;
+			if Is_In(Element(grid(ml.row), ml.col), count_positions) then
+				total := total + 1;
+			end if;
+			MarkLocation(ml,'X');
+		end if;
+		ml.row := l.row;
+		if l.col > 1 then
+			ml.col := l.col -1;
+			if Is_In(Element(grid(ml.row), ml.col), count_positions) then
+				total := total + 1;
+			end if;
+			MarkLocation(ml,'X');
+		end if;
+		if l.col < Length(grid(0)) then
+			ml.col := l.col +1;
+			if Is_In(Element(grid(ml.row), ml.col), count_positions) then
+				total := total + 1;
+			end if;
+			MarkLocation(ml,'X');
+		end if;
+		return total;
+	end CountMarkAround;
+
+
+	function FillGridAux(l: Location) return Integer
+	is
+		total : Integer := 0;
+		idx : Integer;
+		char_idx : Integer;
+		change: boolean := True;
+		border : boolean := false;
+		cl : Location;
+		nl : Location;
+	begin
+		if Is_In(Element(grid(l.row), l.col), count_positions) then
+			total := 1;
+		end if;
+		MarkLocation(l, 'X');
+		while change loop
+			change := False;
+			for row in Unbounded_StringVector.First_Index(grid) .. Unbounded_StringVector.Last_Index(grid) loop 
+				for char_idx in 1 .. Integer(Length(grid(row))) loop
+					if Element(grid(row), char_idx) = 'X' then
+						cl.row := row;
+						cl.col := char_idx;
+						if CanMarkAround(cl) then
+							change := True;
+							if BordersWall(cl) then
+								--Put_Line("WALL row: " & cl.row'Image & " col: " & cl.col'Image);
+								border := true;
+							end if;
+							total := total + CountMarkAround(cl);
+						end if;
+					end if;
+				end loop;	
+			end loop;
+			--Put_Line("Can mark " & change'Image);
+			--PrintGrid;
+		end loop;
+		--Put_Line("Border: " & Border'Image & " total: " & total'Image);
+		if border then
+			total := 0;
+		end if;
+		return total;
+	end;
+
+
+	procedure FillGrid
+	is
+		total : Integer := 0;
+		add : Integer;
+		l : Location;
+		col : Integer;
+		available : boolean := True;
+	begin
+		Put_Line("FillGrid");
+		while available loop
+			available := False;
+			for row in Unbounded_StringVector.First_Index(grid) .. Unbounded_StringVector.Last_Index(grid) loop 
+				col := Index(
+					source => grid(row), 
+					set => valid_positions,
+					from => 1
+					);
+				if col /= 0 then
+					available := True;
+					l.row := row;
+					l.col := col;
+					exit;
+				end if;
+			end loop;
+			add := FillGridAux(l);
+			total := total + add;
+			Put_Line("result and addition: "  & add'Image & " total: " & total'Image);
+			PrintGrid;
+		end loop;
+		Put_Line("Elements within: " & total'Image);
+	end FillGrid;
+
 
 	procedure Main is
 		F         : File_Type;
@@ -312,6 +521,7 @@ package body solutionpkp is
 
 		PrintGrid;
 		WalkGrid;
+		FillGrid;
 		Close (F);
 	end Main;
 end solutionpkp;
