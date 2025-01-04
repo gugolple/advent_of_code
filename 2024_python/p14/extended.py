@@ -18,6 +18,18 @@ def cuad_pert(dim, p):
     if ph > midh and pv > midv:
         return 4
 
+def print_mat(mat):
+    for row in mat:
+        print(row)
+
+def create_mat(dim, sp: set):
+    mat = list()
+    for _ in range(dim[0]):
+        mat.append([0] * dim[1])
+    for h, v in sp:
+        mat[h][v] = 1
+    return mat
+
 
 def entry_func(inp: str, dim = (101, 103)):
     print(inp)
@@ -31,10 +43,11 @@ def entry_func(inp: str, dim = (101, 103)):
     found = False
     while not found:
         points = set([calc_pos(dim, p, v, itr) for p, v in start_data])
+        print(itr)
+        print_mat(create_mat(dim, points))
         if len(points) == 500:
             break
         itr += 1
-        print(itr)
     return itr 
 
 if __name__ == "__main__":
