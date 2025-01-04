@@ -34,7 +34,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_advent_basic() {
+    fn basic() {
         let input = "";
         assert_eq!(process_input(input),1);
     }
