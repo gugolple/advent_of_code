@@ -7,8 +7,8 @@ def main(iv):
 
 # To run tests: "python -m unittest -v p1.py"
 class TestAdvent(unittest.TestCase):
-    def test_basic_4(self):
-        self.assertEqual(main(None) 0)
+    def test_basic(self):
+        self.assertEqual(main(None), 0)
 
 if __name__ == "__main__":
     rows = sys.stdin.read().strip()
