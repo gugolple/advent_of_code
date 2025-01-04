@@ -208,15 +208,15 @@ package body solutionpkp is
                 Append(block, t);
             end if;
         end loop;
+        Append(blocks, block);
 
         Put_Line("Actual:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
         -- Now with all the input in a single place!
         for blk of blocks loop
-            Put_Line("Block:!");
             srv.append(srv_nc);
             srv_nc.clear;
             SRSorter.Sort(srv);
-            Put_Line("Ranges:");
+            Put_Line("Seeds");
             for e of srv loop
                 Put_Line("(" & e.start_range'Image & "," & e.end_range'Image & ")");
             end loop;
@@ -225,32 +225,32 @@ package body solutionpkp is
             while idx < Integer(Length(srv)) loop
                 e := Element(srv, idx);
                 hitted := False;
-                Put_Line("Row! s: " & e.start_range'Image & " e: " & e.end_range'Image);
+                --Put_Line("Row! s: " & e.start_range'Image & " e: " & e.end_range'Image);
                 for transf of blk loop
                     os := Long_Long_Integer'Max(e.start_range, transf.start_range);
                     oe := Long_Long_Integer'Min(e.end_range, transf.start_range + transf.end_range);
-                    Put_Line(os'Image & "," & oe'Image);
+                    --Put_Line(os'Image & "," & oe'Image);
                     if os < oe then
-                        hitted := True;
                         te.start_range := os - transf.start_range + transf.destination_start;
                         te.end_range := oe - transf.start_range + transf.destination_start;
-                        Put_Line("Hit C! s: " & te.start_range'Image & " e: " & te.end_range'Image);
+                        --Put_Line("Hit C! s: " & te.start_range'Image & " e: " & te.end_range'Image);
                         srv_nc.append(te);
 
                         -- If split KEEP PROCESSING FOR CURRENT LOOP!
                         if os > e.start_range then
                             te.start_range := e.start_range;
                             te.end_range := os;
-                            Put_Line("Hit L! s: " & te.start_range'Image & " e: " & te.end_range'Image);
+                            --Put_Line("Hit L! s: " & te.start_range'Image & " e: " & te.end_range'Image);
                             srv.append(te);
                         end if;
 
                         if e.end_range > oe then
                             te.start_range := oe;
                             te.end_range := e.end_range;
-                            Put_Line("Hit R! s: " & te.start_range'Image & " e: " & te.end_range'Image);
+                            --Put_Line("Hit R! s: " & te.start_range'Image & " e: " & te.end_range'Image);
                             srv.append(te);
                         end if;
+                        hitted := True;
                         exit;
                     end if;
                 end loop;
@@ -264,11 +264,12 @@ package body solutionpkp is
         end loop;
         srv.append(srv_nc);
         srv_nc.clear;
+        SRSorter.Sort(srv);
 
-        Put_Line("Closing");
+        Put_Line("Seeds");
         e := First_Element(srv);
         for V of srv loop
-            Put_Line("s: " & V.start_range'Image & " e: " & V.end_range'Image); 
+            Put_Line("(" & V.start_range'Image & "," & V.end_range'Image & ")");
             if v.start_range < e.start_range then
                 e := v;
             end if;
