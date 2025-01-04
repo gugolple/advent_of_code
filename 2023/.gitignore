@@ -1,7 +1,9 @@
 *.o
 *.ali
 secret
-*input.txt
+actual_input.txt
+input.txt
+results.txt
 *.swp
 */solution
 */solutionp
