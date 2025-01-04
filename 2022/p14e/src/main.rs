@@ -6,8 +6,8 @@ use std::cmp;
 
 #[derive(Debug, Copy, Clone)]
 struct Position {
-    row: usize,
-    col: usize,
+    row: i64,
+    col: i64,
 }
 
 fn add(left: &Position, right: &Position) -> Position{
@@ -20,7 +20,7 @@ fn add(left: &Position, right: &Position) -> Position{
 fn print_grid(grid: &Vec<Vec<char>>) {
     println!("Grid:");
     for ci in 0 .. grid[0].len() {
-        println!("Row {:0>3}: {:?}", ci, grid.iter().map(|x| x[ci]).collect::<String>());
+        println!("Col {:0>3}: {:?}", ci, grid.iter().map(|x| x[ci]).collect::<String>());
     }
 }
 
@@ -34,8 +34,20 @@ fn transpose_grid(grid: &Vec<Vec<char>>) -> Vec<Vec<char>> {
 
 fn grid_from_size(size: &Position) -> Vec<Vec<char>> {
     iter::repeat(
-        iter::repeat('.').take(size.col).collect()
-        ).take(size.row).collect()    
+        iter::repeat('.').take(size.col.try_into().unwrap()).collect()
+        ).take(size.row.try_into().unwrap()).collect()    
+}
+
+fn set_grid_item_usize(grid: &mut Vec<Vec<char>>, row: usize, col: usize, chr: char) {
+    grid[row][col] = chr;
+}
+
+fn set_grid_item_i64(grid: &mut Vec<Vec<char>>, row: i64, col: i64, chr: char) {
+    set_grid_item_usize(grid, row.try_into().unwrap(), col.try_into().unwrap(), chr);
+}
+
+fn set_grid_item(grid: &mut Vec<Vec<char>>, pos: &Position, chr: char) {
+    set_grid_item_i64(grid, pos.row, pos.col, chr);
 }
 
 fn set_grid_from_rock_lines(grid: &mut Vec<Vec<char>>, rock_lines: &Vec<Vec<Position>>, start_coor: &Position) {
@@ -59,19 +71,27 @@ fn set_grid_from_rock_lines(grid: &mut Vec<Vec<char>>, rock_lines: &Vec<Vec<Posi
             println!("Start: {:?} Dest: {:?}", start_pos, end_pos);
 
             for row_idx in start_pos.row ..= end_pos.row {
-                grid[row_idx][start_pos.col] = '#';
+                set_grid_item_i64(grid, row_idx, start_pos.col, '#');
             }
             for col_idx in start_pos.col ..= end_pos.col {
-                grid[start_pos.row][col_idx] = '#';
+                set_grid_item_i64(grid, start_pos.row, col_idx, '#');
             }
 
-            print_grid(grid);
+            //print_grid(grid);
         }
     }
 }
 
+fn get_grid_usize(grid: &mut Vec<Vec<char>>, row: usize, col: usize) -> char {
+    return grid[row][col];
+}
+
+fn get_grid_i64(grid: &mut Vec<Vec<char>>, row: i64, col: i64) -> char {
+    return get_grid_usize(grid, row.try_into().unwrap(), col.try_into().unwrap());
+}
+
 fn get_grid(grid: &mut Vec<Vec<char>>, rel: &Position) -> char {
-    return grid[rel.row][rel.col];
+    return get_grid_i64(grid, rel.row, rel.col);
 }
 
 fn sand_simulation(grid: &mut Vec<Vec<char>>, sand_start_rel: &Position) -> u64 {
@@ -84,10 +104,13 @@ fn sand_simulation(grid: &mut Vec<Vec<char>>, sand_start_rel: &Position) -> u64 
         count = count + 1;
 
         let mut pos: Position = *sand_start_rel;
+        if get_grid(grid, &pos) == 'o' {
+            break 'big;
+        }
         'drop_sand: loop {
             let mut next_pos = add(&pos, &drop);
-            println!("NP: {:?}", next_pos);
-            if next_pos.col == grid[next_pos.row].len() {
+            //println!("NP: {:?}", next_pos);
+            if next_pos.col == grid[next_pos.row as usize].len() as i64 {
                 break 'big;
             }
             match get_grid(grid, &next_pos) {
@@ -107,7 +130,7 @@ fn sand_simulation(grid: &mut Vec<Vec<char>>, sand_start_rel: &Position) -> u64 
                     }
                     let mut right_valid = true;
                     // Right
-                    if next_pos.row < grid.len()-1 {
+                    if next_pos.row < (grid.len()-1) as i64 {
                         if ! left_valid {
                             let right_pos = Position{row: next_pos.row+1, col: next_pos.col};
                             match get_grid(grid, &right_pos) {
@@ -117,18 +140,20 @@ fn sand_simulation(grid: &mut Vec<Vec<char>>, sand_start_rel: &Position) -> u64 
                             };
                         };
                     } else {
+                        panic!("No longer valid!");
                         break 'big;
                     }
                     if !left_valid && !right_valid {
-                        grid[pos.row][pos.col] = 'o';
+                        set_grid_item(grid, &pos, 'o');
                         break 'drop_sand;
                     }
                 },
                 _ => panic!("Bad grid!"),
             };
         }
-        print_grid(grid);
+        //print_grid(grid);
     }
+    print_grid(grid);
     // We exit when the first sand fell outside
     return count -1;
 }
@@ -144,8 +169,8 @@ fn process_input(input: &str) -> u64 {
                 //println!("Split!: {}", pos);
                 let mut num = pos.split(",");
                 rl.push(Position{
-                    row: num.next().expect("Should exist").parse::<usize>().unwrap(),
-                    col: num.next().expect("Should exist").parse::<usize>().unwrap(),
+                    row: num.next().expect("Should exist").parse::<i64>().unwrap(),
+                    col: num.next().expect("Should exist").parse::<i64>().unwrap(),
                 });
             }
             rock_lines.push(rl);
@@ -157,8 +182,10 @@ fn process_input(input: &str) -> u64 {
     let mut start_coordinates = Position{ row: sand_pos.row, col: sand_pos.col};
     let mut end_coordinates = Position{ row: sand_pos.row, col: sand_pos.col};
 
+    // Set grid referential limits
     for line in &rock_lines {
-        println!("L: {:?}", line);
+        // Debug print all lines
+        //println!("L: {:?}", line);
         for pos in line {
             start_coordinates.row = if start_coordinates.row > pos.row {pos.row} else {start_coordinates.row};
             start_coordinates.col = if start_coordinates.col > pos.col {pos.col} else {start_coordinates.col};
@@ -166,25 +193,39 @@ fn process_input(input: &str) -> u64 {
             end_coordinates.col = if end_coordinates.col < pos.col {pos.col} else {end_coordinates.col};
         }
     }
+    let margin = 400;
+
+    // Add margin to account for the new specs
+    start_coordinates.row = start_coordinates.row - margin;
+    end_coordinates.row = end_coordinates.row + margin;
+    end_coordinates.col = end_coordinates.col + 2;
+
+    // Add the bottom line
+    rock_lines.push(vec![
+        Position {row: start_coordinates.row, col: end_coordinates.col},
+        Position {row: end_coordinates.row, col: end_coordinates.col},
+    ]);
 
     let size = Position {
         row: end_coordinates.row - start_coordinates.row + 1,
         col: end_coordinates.col - start_coordinates.col + 1,
     };
 
-    println!("Start: {:?}", start_coordinates);
-    println!("End: {:?}", end_coordinates);
-    println!("Size: {:?}", size);
-
-    let mut grid = grid_from_size(&size);
-    grid[500-start_coordinates.row][0] = '+';
-    set_grid_from_rock_lines(&mut grid, &rock_lines, &start_coordinates);
-    print_grid(&grid);
-
     let sand_rel = Position {
         row: sand_pos.row - start_coordinates.row,
         col: sand_pos.col - start_coordinates.col,
     };
+
+    println!("Transformed!");
+    println!("Start: {:?}", start_coordinates);
+    println!("End: {:?}", end_coordinates);
+    println!("Sand: {:?}", sand_rel);
+    println!("Size: {:?}", size);
+
+    let mut grid = grid_from_size(&size);
+    set_grid_item(&mut grid, &sand_rel, '+');
+    set_grid_from_rock_lines(&mut grid, &rock_lines, &start_coordinates);
+    print_grid(&grid);
     return sand_simulation(&mut grid, &sand_rel);
 }
 
