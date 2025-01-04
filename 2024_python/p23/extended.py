@@ -17,51 +17,35 @@ def generate_connections(inp):
             con[r] = set([l])
     return con
 
-def generate_max_recursv(cons, lc):
-    set_pos = set()
-    set_pos |= cons[lc[0]]
-    for le in lc[1:]:
-        cp = cons[le]
-        if cp is not None:
-            set_pos &= cp
-    #print("lc", lc, set_pos)
-    resl = 0
+def generate_single(cons, lc):
+    pos_con = set()
+    pos_con |= cons[lc[0]]
+    for e in lc[1:]:
+        pos_con &= cons[e]
     res = set()
-    if len(set_pos) > 0:
-        for rp in set_pos:
-            nlc = deepcopy(lc)
-            nlc.append(rp)
-            cp = generate_max_recursv(cons, nlc)
-            #print("ICP", cp)
-            for ccp in cp:
-                cpl = len(ccp)
-                if cpl>resl:
-                    resl = cpl
-                    res = set([ccp])
-                elif cpl == resl:
-                    res.add(ccp)
-    else:
-        res = set([tuple(sorted(lc))])
-        #print("Limit!", res)
+    for pc in pos_con:
+        res.add(tuple(sorted([*lc, pc])))
+    #print(res)
     return res
+        
 
 def generate_all_max_recursv(cons):
-    #print(cons)
-    res = None
-    best = 0
-    #print("Start search")
-    for start in sorted(cons.keys()):
-        #print(start)
-        c = generate_max_recursv(cons, [start])
-        for ce in c:
-            print(ce)
-            lce = len(ce)
-            if lce > best:
-                best = lce
-                res = set([ce])
-            elif lce == best:
-                res.add(ce)
-    return res
+    itr = 0
+    set_starts = set([tuple([i]) for i in cons.keys()])
+    print(set_starts)
+    nxt_itr = deepcopy(set_starts)
+    while len(nxt_itr) > 0:
+        itr += 1
+        cur_itr = set()
+        for start in nxt_itr:
+            ns = generate_single(cons, start)
+            #print("start", start, ns)
+            for ps in ns:
+                cur_itr.add(ps)
+        set_starts = nxt_itr
+        nxt_itr = cur_itr
+        print(itr)
+    return set_starts
 
 def entry_func(inp: str):
     tot = 0
