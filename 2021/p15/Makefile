@@ -5,7 +5,7 @@ OBJ = $(SRC:.c=.o)
 OBJD = $(SRC:.c=.d.o)
 
 GLIB_FLAGS=`pkg-config --libs glib-2.0`
-CFLAGS=-Wall -std=c11 `pkg-config --cflags glib-2.0` -O2 -lgmp -I$(PQ_PATH)
+CFLAGS=-Wall -std=c11 `pkg-config --cflags glib-2.0` -O2 -I$(PQ_PATH)
 
 program: $(OBJ)
 	$(CC) $(OBJ) $(CFLAGS) $(GLIB_FLAGS) -o program
