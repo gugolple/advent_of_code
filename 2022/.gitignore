@@ -1,6 +1,6 @@
 *.swp
-*/target
-*/foo.txt
-*/input.txt
-*/result.txt
-*/results.txt
+*target
+*foo.txt
+*input.txt
+*result.txt
+*results.txt
