@@ -1,6 +1,8 @@
 import unittest, sys, heapq
+from copy import deepcopy
 from collections import deque
 from enum import Enum
+sys.setrecursionlimit(15000)
 
 # Orientation
 # Just for me
@@ -67,13 +69,20 @@ def clone_mat(mat, v=-1):
     for r in mat:
         nm.append([v for _ in r])
     return nm
-        
 
-def walk_path_dijstra(mat, start_loc_or):
-    nm = clone_mat(mat)
-    print(nm)
+def possible_moves(mat, c, l, o):
+    res = []
+    for m, no in [((-1, 0), Or.N), ((1, 0), Or.S), ((0, -1), Or.W), ((0, 1), Or.E)]:
+        # Next location
+        nl = add_pos(l, m)
+        if get_mat(mat, nl) != '#':
+            nc = c + 1 + cost_pairs[o, no]
+            res.append((nc, nl, no))
+    return res
+
+def walk_path_dijstra(mat, start_loc_or, c=0):
     seen = set()
-    hpq = list([(0, start_loc_or[0], start_loc_or[1])])
+    hpq = list([(c, start_loc_or[0], start_loc_or[1])])
     best = 0
     while len(hpq)>0:
         c, l, o = heapq.heappop(hpq)
@@ -81,49 +90,43 @@ def walk_path_dijstra(mat, start_loc_or):
         if get_mat(mat, l) == 'E':
             if best == 0 or best > c:
                 best = c
-        nmc = get_mat(nm, l)
-        if (l, o) in seen and nmc < c:
+        if (l, o) in seen:
+            continue
+        if best != 0 and c > best:
             continue
         seen.add((l, o))
-        if nmc == -1 or c < nmc:
-            set_mat(nm, l, c)
-        #print(c, l, o)
-        for m, no in [((-1, 0), Or.N), ((1, 0), Or.S), ((0, -1), Or.W), ((0, 1), Or.E)]:
-            # Next location
-            nl = add_pos(l, m)
-            if get_mat(mat, nl) != '#':
-                nc = c + 1 + cost_pairs[o, no]
-                heapq.heappush(hpq, (nc, nl, no))
-    return nm
+        for nc, nl, no in possible_moves(mat, c, l, o):
+            heapq.heappush(hpq, (nc, nl, no))
+    return best
 
-def count_paths(mat, wm):
-    el = find_mat(mat, 'E')
-    seen = set()
-    cv = get_mat(wm, el)
-    pl = deque([(el, cv)]) 
-    while len(pl) > 0:
-        cl, cv = pl.popleft()
-        if cv < 0:
+def walk_all(mat, start_loc_or):
+    cnt = 0
+    seen = dict()
+    res = set()
+    tgt = walk_path_dijstra(mat, start_loc_or)
+    dq = deque([(0, start_loc_or[0], start_loc_or[1])])
+    while len(dq) > 0:
+        c, l, o = dq.popleft()
+        # If checked
+        if l in seen and seen[l] < c:
             continue
-        if cl in seen:
+        seen[l] = c
+        # If not good
+        cnt += 1
+        if walk_path_dijstra(mat, (l, o), c) != tgt:
             continue
-        print(cl, cv)
-        seen.add(cl)
-        for m in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nl = add_pos(cl, m)
-            nv = get_mat(wm, nl)
-            if nv+1 == cv or nv+1001 == cv:
-                pl.append((nl, nv))
-    print(len(seen))
-    return 0
+        res.add(l)
+        for nc, nl, no in possible_moves(mat, c, l, o):
+            dq.append((nc, nl, no))
+    print(cnt, len(res))
+    return len(res)
+
 
 def entry_func(inp: str):
     mat = [list(i) for i in inp.split('\n')]
     print_mat(mat)
     start_loc_or = (find_mat(mat, 'S'),Or.E)
-    walked_mat = walk_path_dijstra(mat, start_loc_or)
-    print_mat_pad(walked_mat)
-    tot = count_paths(mat, walked_mat)
+    tot = walk_all(mat, start_loc_or)
     return tot
 
 if __name__ == "__main__":
