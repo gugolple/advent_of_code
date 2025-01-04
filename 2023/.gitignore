@@ -1,9 +1,11 @@
 *.o
+*.txt
 *.ali
 secret
 actual_input.txt
 input.txt
 results.txt
 *.swp
+*.exe
 */solution
 */solutionp
