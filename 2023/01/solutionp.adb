@@ -3,10 +3,8 @@ with Ada.Strings; use Ada.Strings;
 with Ada.Strings.Bounded; use Ada.Strings.Bounded;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Ada.Strings.Maps;  use Ada.Strings.Maps;
-with Ada.Characters.Handling;
-use  Ada.Characters.Handling;
-with Ada.Strings.Unbounded;
-use  Ada.Strings.Unbounded;
+with Ada.Strings.Unbounded; use  Ada.Strings.Unbounded;
+with Ada.Characters.Handling; use  Ada.Characters.Handling;
 
 procedure solutionp is
         F         : File_Type;
