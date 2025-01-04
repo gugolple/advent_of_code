@@ -12,9 +12,6 @@ def aux_rec(ops):
         left = int(op)
     else:
         raise Exception(f"Bad data!: {op}")
-
-
-    nl = []
     for op, right in zip(ops[1::2], ops[2::2]):
         print(op, right)
         rv = None
@@ -26,28 +23,9 @@ def aux_rec(ops):
         if op == "+":
             left += rv
         elif op == "*":
-            nl.append(left)
-            nl.append(op)
-            left = rv
-        else:
-            raise Exception(f"Bad pair!: {op} -- {right}")
-    nl.append(left)
-    print(nl, left)
-
-    left = nl[0]
-    for op, right in zip(nl[1::2], nl[2::2]):
-        print(op, right)
-        rv = None
-        if type(right) is list:
-            rv = aux_rec(right)
-        else:
-            rv = int(right)
-        
-        if op == "*":
             left *= rv
         else:
             raise Exception(f"Bad pair!: {op} -- {right}")
-    print(left)
     return left
 
 
@@ -68,6 +46,30 @@ def parenthesis_to_lists(ops):
         idx += 1
     return tmp, len(ops)
 
+def prioritize_element(ops, elem="+"):
+    print("Priority")
+    print("Input", ops)
+    
+    i = 0
+    while i < len(ops):
+        ce = ops[i]
+        if type(ce) is list:
+            ops[i] = prioritize_element(ce)
+        i += 1
+    print()
+    i = 0
+    while i < len(ops):
+        ce = ops[i]
+        if ce == "+":
+            print(ops[i-1:i+2])
+            ops[i-1:i+2] = [ops[i-1:i+2]]
+            i -= 1
+        i += 1
+    print()
+
+    print("Out", ops)
+    return ops
+
 
 def main(rows):
     tot = 0
@@ -76,7 +78,8 @@ def main(rows):
         r2 = r1.replace(")", " )")
         ops = r2.split(" ")
         recursed = parenthesis_to_lists(ops)[0]
-        ttot = aux_rec(recursed)
+        prior = prioritize_element(recursed)
+        ttot = aux_rec(prior)
         tot += ttot
     return tot
 
