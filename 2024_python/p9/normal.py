@@ -2,12 +2,12 @@ import unittest, sys
 
 def find_last_occupied(list_blocks):
     for idx in reversed(range(len(list_blocks))):
-        if list_blocks[idx][0] != -1:
+        if list_blocks[idx] != -1:
             return idx
 
 def find_first_free(list_blocks):
     for idx, i in enumerate(list_blocks):
-        if i[0] == -1:
+        if i == -1:
             return idx
 
 def entry_func(inp: str):
@@ -19,47 +19,25 @@ def entry_func(inp: str):
     for i in [int(i) for i in inp]:
         occupied = not occupied
         if i == 0: continue
+        nv = cid
         if occupied:
-            list_blocks.append((cid, i))
             cid += 1
         else:
-            list_blocks.append((-1, i))
-    list_blocks.append((-1, 0))
+            nv = -1
+        for _ in range(i):
+            list_blocks.append(nv)
     print(list_blocks)
-    ffidx = find_first_free(list_blocks)
-    # Keep processing until free space is all at the end
-    while ffidx < (len(list_blocks)-1):
-    #for _ in range(2):
-        idx_last_occupied = find_last_occupied(list_blocks)
-        relocation = list_blocks[idx_last_occupied]
-        #print()
-        #print(list_blocks)
-        #print(relocation)
-        while relocation[1] > 0:
-            idx_fist_free = find_first_free(list_blocks)
-            if list_blocks[idx_fist_free][1] >= relocation[1]:
-                del list_blocks[idx_last_occupied]
-                list_blocks[idx_fist_free] = (list_blocks[idx_fist_free][0], list_blocks[idx_fist_free][1] - relocation[1])
-                if list_blocks[idx_fist_free][1] == 0:
-                    del list_blocks[idx_fist_free]
-                list_blocks.insert(idx_fist_free, relocation)
-                break
-            else:
-                # print(relocation)
-                relocation = (relocation[0], relocation[1]-list_blocks[idx_fist_free][1])
-                list_blocks[idx_fist_free] = (relocation[0], list_blocks[idx_fist_free][1]) 
-
-        ffidx = find_first_free(list_blocks)
-    print()
+    ff = find_first_free(list_blocks)
+    lo = find_last_occupied(list_blocks)
+    while ff < lo:
+        list_blocks[ff] = list_blocks[lo]
+        list_blocks[lo] = -1
+        ff = find_first_free(list_blocks)
+        lo = find_last_occupied(list_blocks)
     print(list_blocks)
-    pos = 0
-    for tup in list_blocks:
-        for c in range(tup[1]):
-            if tup[0] >= 0:
-                tr = pos * tup[0]
-                print(pos, tup[0], tr)
-                tot += tr
-            pos += 1
+    for pos, v in enumerate(list_blocks):
+        if v == -1: continue
+        tot += pos * v
     return tot
 
 if __name__ == "__main__":
