@@ -189,7 +189,7 @@ package body solutionpk is
 
 	function BestRoute(grid: IntegerVectorVector.Vector ) return Integer
 	is
-		LIMIT_STRAIGHT : constant Integer := 2;
+		LIMIT_STRAIGHT : constant Integer := 3;
 		grid_totals : IntegerVectorVector.Vector;
 		nl : Location;
 		td : Direction;
@@ -223,7 +223,7 @@ package body solutionpk is
 				exit;
 			end if;
 			-- Only if not processed
-			if not Contains(traveled, current_dij) and (grid_totals(current_dij.l.row)(current_dij.l.col) > current_dij.cost or grid_totals(current_dij.l.row)(current_dij.l.col)=0) then
+			if not Contains(traveled, current_dij) then
 				traveled.Insert(current_dij);
 				grid_totals(current_dij.l.row)(current_dij.l.col) := current_dij.cost;
 				Put_Line("Loc row: " & current_dij.l.row'Image & " col: " & current_dij.l.col'Image & " cost: " & current_dij.cost'Image);
