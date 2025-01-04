@@ -67,7 +67,7 @@ package body solutionpkp is
 			);
 		while idx /= 0 loop
 			-- Process current match
-			--Put_Line("Indexs: " & idxl'image & ", " & idx'image);
+			Put_Line("Indexs: " & idxl'image & ", " & idx'image);
 			-- Next loop preparation
 			statemachine_proc(To_Unbounded_String(Slice(capture,idxl,idx)));
 
@@ -113,6 +113,7 @@ package body solutionpkp is
 				fin := Length(str)+1;
 			elsif fin-beg /= L then
 				if fin-beg <= L and then Element(str, fin) = '?' then
+					null;
 					Put_Line("Early exit end!");
 				else
 					valid := False;
@@ -132,9 +133,6 @@ package body solutionpkp is
 			end if;
 		end if;
 		Put_Line("RecursedLine: " & To_String(str) & " Valid: " & Valid'Image);
-		if valid then
-			Put_Line("RecursedLine: " & To_String(str) & " Valid: " & Valid'Image);
-		end if;
 		return valid;
 	end CheckValid;
 
@@ -144,16 +142,14 @@ package body solutionpkp is
 		total : long_integer := 0;
 		idx : Integer;
 		Search_Set : constant Character_Set := To_Set("?");
-		Mslice : Unbounded_String;
 		tstr : Unbounded_String_Access;
 	begin
-		mslice := To_Unbounded_String(Slice(str, pos, Length(str)));
-		Put_Line("Pos: " & pos'Image & " slice: " & To_String(mslice) & " str: " & To_string(str));
+		--Put_Line("Pos: " & pos'Image & " str: " & To_string(str));
 		if pos > 1 and then not CheckValid(str) then
 			return total;
-		elsif Contains(dp, mslice) then
-			total := Element(dp, mslice);
-			Put_Line("Known! Val: " &  total'Image);
+		elsif Contains(dp, str) then
+			total := Element(dp, str);
+			--Put_Line("Known! Val: " &  total'Image);
 			return total;
 		end if;
 		idx := Index(
@@ -162,7 +158,7 @@ package body solutionpkp is
 			From => 1
 			);
 		if idx = 0 then
-			Put_Line("All valid!");
+			--Put_Line("All valid!");
 			return 1;
 		else
 			overwrite(str, idx, ".");
@@ -172,15 +168,15 @@ package body solutionpkp is
 			curr := RecurseSolution(str, idx);
 			total := total + curr;
 			overwrite(str, idx, "?");
-			if not Contains(dp, mslice) and total > 0 then
+			if not Contains(dp, str) and total > 0 then
 				tstr := new Unbounded_String;
-				for I in 1 .. Length(mslice) loop
-					append(tstr.all, Element(mslice, I));
+				for I in 1 .. Length(str) loop
+					append(tstr.all, Element(str, I));
 				end loop;
 				Insert(dp, tstr.all, total);
 			end if;
 		end if;
-		Put_Line("R total: " & total'Image);
+		--Put_Line("R total: " & total'Image);
 		return total;
 	end RecurseSolution;
 

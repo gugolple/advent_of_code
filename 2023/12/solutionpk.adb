@@ -76,57 +76,65 @@ package body solutionpk is
 		next_nums : IntegerVector.Vector;
 		nstr : Unbounded_String;
 	begin
+		--Put("Str: " & To_String(str) & " nums: ");
 		--for I of nums loop
-		--	Put(I'Image & " ");
+		--	Put(I'Image & ",");
 		--end loop;
-		--Put_Line("Str: " & To_String(str));
+		--Put_Line("");
+
+		-- If no more chars
 		if Length(str) = 0 then
 			if Length(nums) = 0 then
 				return 1;
-			else
-				return 0;
 			end if;
-		end if;
-		if Length(nums) = 0 then
-			if Index(str, "#", 1) = 0 then
-				return 1;
-			else
-				return 0;
-			end if;
+			return 0;
 		end if;
 
-		-- Respect it as a working
-		idx := Index(str, To_Set(".?"), 1);
-		if idx > 0 then
+		-- If no more nums
+		if Length(nums) = 0 then
+			-- No more to worl
+			if Index(str, "#", 1) = 0 then
+				return 1;
+			end if;
+			return 0;
+		end if;
+
+		-- Now recursion
+		-- If we think is blank
+		if Element(str, 1) = '.' or Element(str, 1) = '?' then
 			nstr := To_Unbounded_String("");
-			for I in idx+1 .. Length(str) loop
-				append(nstr,Element(str, I));
+			for I in 2 .. Length(str) loop
+				append(nstr, Element(str,I));
 			end loop;
-			--Put_Line(".nstr: " & To_String(nstr));
 			total := total + RecurseSolution(nstr, nums);
 		end if;
-		-- Respect it as a broken
-		idx := Index(str, To_Set("#?"), 1);
-		if idx > 0 then
+		-- If we think is hit
+		if Element(str, 1) = '#' or Element(str, 1) = '?' then
 			first_val := First_Element(nums);
-			if first_val <= Length(str) and (Index(str, To_Set("."), 1) = 0 or Index(str, To_Set("."), 1) > first_val) then
-				if Length(str) = first_val or (first_val+1 <= Length(str) and then Element(str, first_val+1) /= '#') then
-					for I in 1 .. Integer(Length(nums))-1 loop
-						next_nums.append(nums(I));
+			idx := Index(str, ".", 1);
+			if idx = 0 then
+				idx := Length(str) +1;
+			end if;
+			if first_val <= Length(str) and idx > first_val then
+				if Length(str) = first_val or else Element(str, first_val+1) /= '#' then
+					next_nums.clear;
+					for I in 1 .. Integer(Length(nums)-1) loop
+						append(next_nums, Element(nums,I));
 					end loop;
 					nstr := To_Unbounded_String("");
 					for I in first_val+2 .. Length(str) loop
-						append(nstr,Element(str, I));
+						append(nstr, Element(str,I));
 					end loop;
-					--Put_Line("#nstr: " & To_String(nstr));
-					total := total + recursesolution(nstr, next_nums);
+					total := total + RecurseSolution(nstr, next_nums);
 				end if;
 			end if;
 		end if;
+
+		--Put("Str: " & To_String(str) & " nums: ");
 		--for I of nums loop
-		--	Put(I'Image & " ");
+		--	Put(I'Image & ",");
 		--end loop;
-		--Put_Line("Str: " & To_String(str));
+		--Put_Line("");
 		--Put_Line("Total: " & total'Image);
 		return total;
 	end RecurseSolution;
