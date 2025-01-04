@@ -99,7 +99,19 @@ package body solutionpkp is
 					case HandRepresentation.Length(repr) is
 						when 1 => last_handtype := FiveKind;
 						when 2 => last_handtype := FiveKind;
-						when 3 => last_handtype := FullHouse;
+						when 3 => 
+							case repr.element(J) is
+								when 1 =>
+									last_handtype := FullHouse;
+									for count of repr loop
+										if count = 3 then
+											last_handtype := FourKind;
+										end if;
+									end loop;
+								when 2 => last_handtype := FourKind;
+								when 3 => last_handtype := FourKind;
+								when others => Put_Line("JFOCK");
+							end case;
 						when 4 => last_handtype := ThreeKind;
 						when 5 => last_handtype := TwoKind;
 						when others => Put_Line("DAFOK");
