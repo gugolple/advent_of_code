@@ -30,6 +30,57 @@ def create_mat(dim, sp: set):
         mat[h][v] = 1
     return mat
 
+def iter_equals(l1, l2):
+    for l, r in zip(l1, l2):
+        if l!=r:
+            return False
+    return True
+
+def check_square(sp: set):
+    for p in sp:
+        l = 0
+        np = (p[0], p[1]+1)
+        next_itr = False
+        # Check to the right
+        while np in sp:
+            print("-", np)
+            next_itr = True
+            l += 1
+            np = (np[0], np[1]+1)
+        if next_itr:
+            next_itr = False
+            # Check down
+            np = (np[0]+1, np[1]-1)
+            while np in sp:
+                print("-", np)
+                next_itr = True
+                l += 1
+                np = (np[0]+1, np[1])
+            if next_itr:
+                next_itr = False
+                # Check left
+                np = (np[0]-1, np[1]-1)
+                while np in sp:
+                    print("-", np)
+                    next_itr = True
+                    l += 1
+                    np = (np[0], np[1]-1)
+                if next_itr:
+                    next_itr = False
+                    # Check up
+                    np = (np[0]-1, np[1]+1)
+                    while np in sp:
+                        print("-", np)
+                        next_itr = True
+                        l += 1
+                        np = (np[0]-1, np[1])
+                    if next_itr:
+                        np = (np[0]+1, np[1])
+                        if iter_equals(p, np) and l > 16:
+                            return True
+    return False
+
+
 
 def entry_func(inp: str, dim = (101, 103)):
     print(inp)
@@ -40,14 +91,14 @@ def entry_func(inp: str, dim = (101, 103)):
         v = [int(i) for i in v.split(",")]
         start_data.append((p, v))
     itr = 0
-    found = False
-    while not found:
+    while True:
         points = set([calc_pos(dim, p, v, itr) for p, v in start_data])
         print(itr)
-        print_mat(create_mat(dim, points))
-        if len(points) == 500:
+        if check_square(points):
+            print("CSE")
             break
         itr += 1
+    #print_mat(create_mat(dim, points))
     return itr 
 
 if __name__ == "__main__":
