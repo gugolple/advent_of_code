@@ -7,7 +7,6 @@ struct Position {
     y: i64,
 }
 
-
 #[derive(Debug)]
 struct Range {
     start: i64,
@@ -23,7 +22,8 @@ fn overal_at_row(sensor: &Position, beacon: &Position, row: &i64) -> Option<Rang
     let dist_at_row = manhattan_distance(sensor, &Position{x: sensor.x, y: *row});
     println!("Distance: {} DeltaDistance: {}", dist, dist_at_row);
     if dist_at_row <= dist {
-        let delta = (dist - dist_at_row)/2;
+        // + 1 to include the destination squares
+        let delta = (dist - dist_at_row)/2 + 1;
         return Some(Range{start: sensor.x - delta, end: sensor.x + delta});
     }
     None
@@ -33,6 +33,7 @@ fn process_input(input: &str, row: i64) -> u64 {
     let mut sensors_beacons: Vec<(Position, Position)> = Vec::new();
     for line in input.split("\n") {
         if line != "" {
+            println!("Line: {}", line);
             let sensor_beacon: Vec<_> = line.split(":").collect();
             let sensor: Vec<_> = sensor_beacon[0].split("at ").skip(1).take(1).collect::<Vec<_>>()[0].split(", ").map(|x| x.split("=").skip(1).take(1).collect::<Vec<_>>()[0].parse::<i64>().unwrap()).collect();
             let beacon: Vec<_> = sensor_beacon[1].split("at ").skip(1).take(1).collect::<Vec<_>>()[0].split(", ").map(|x| x.split("=").skip(1).take(1).collect::<Vec<_>>()[0].parse::<i64>().unwrap()).collect();
@@ -56,11 +57,31 @@ fn process_input(input: &str, row: i64) -> u64 {
             ranges.push(r);
         }
     }
+    println!("");
+
+    ranges.sort_by(|a, b| a.start.partial_cmp(&b.start).unwrap());
+    let mut actual_ranges: Vec<Range> = Vec::new();
+    let mut cur_range: Option<Range> = None;
+    for ran in ranges.into_iter() {
+        println!("PR: {:?}", ran);
+        if cur_range.is_none() {
+            cur_range = Some(ran);
+        } else {
+            if ran.start < cur_range.as_ref().expect("Has data").end {
+                cur_range.as_mut().expect("Has data").end = ran.end;
+            } else {
+                actual_ranges.push(cur_range.expect("Already has data"));
+                cur_range = Some(ran);
+            }
+        }
+    }
+    actual_ranges.push(cur_range.expect("Already has data"));
+    println!("");
 
     let mut total = 0;
-    for r in ranges.iter() {
-        println!("Range: {:?}", r);
-        total = total + r.end - r.start;
+    for r in actual_ranges.iter() {
+        println!("RR: {:?}", r);
+        total = total + r.end - r.start + 1; // +1 to include
     }
 
     return total.try_into().unwrap();
