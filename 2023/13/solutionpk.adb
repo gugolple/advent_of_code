@@ -15,54 +15,32 @@ package body solutionpk is
 			);
 	use UnboundedString_Vector;
 
-	function HorizontalCompare(v: UnboundedString_Vector.Vector; idx: out Integer; wall: out boolean) return Natural
+	procedure PrintVector(v: UnboundedString_Vector.Vector)
 	is
-		res : Natural := 0;
-		line : Unbounded_String;
-		valid : Boolean := False;
-		lidx, ridx : Integer;
-		lchr, rchr : Character;
 	begin
-		wall := False;
-		line := v(0);
-		-- FOr all positions
-		for I in 1 .. Length(line)-1 loop
-			valid := True;
-			-- All sizes that make sense
-			for size in 0 .. Integer'Min(I-1, Length(line)-I-1) loop
-				-- All rows
-				for str of v loop
-					Put_Line(To_String(str) & " Idx: " & I'Image & " Size: " & size'Image);
-					lidx := I-size;
-					ridx := I+1+size;
-					Put_Line(lidx'Image & " - " & ridx'Image);
-					lchr := Element(str, lidx);
-					rchr := Element(str, ridx);
-					Put_Line(lchr & " - " & rchr);
-					if lchr /= rchr then
-						valid := False;
-						exit;
-					end if;
-					if not valid then
-						exit;
-					end if;
-				end loop;
-				if not valid then
-					exit;
-				else
-					Put_Line("Saved idx: " & I'Image & " size: " & size'Image);
-					if size + 1 > res then
-						if I - size = 0 or I + 1 + size = Ada.Strings.Unbounded.Length(v(0)) then
-							wall := True;
-						end if;
-						res := size + 1;
-						idx := I;
-					end if;
-				end if;
-			end loop;
+		Put_Line("Vector: ");
+		for I of v loop
+			Put_Line(To_String(I));
 		end loop;
-		return res;
 	end;
+
+	function Transpose(v: UnboundedString_Vector.Vector) return UnboundedString_Vector.Vector 
+	is
+		transposed : UnboundedString_Vector.Vector;
+		my_str : Unbounded_String;
+		count : Integer;
+	begin
+		for I in 1 .. Length(v(0)) loop
+			my_str := To_Unbounded_String(Integer(UnboundedString_Vector.Length(v)));
+			count := 1;
+			for S of v loop
+				Replace_Element(my_str, count, Element(S, I));
+				count := count + 1;
+			end loop;
+			transposed.append(my_str);
+		end loop;
+		return transposed;
+	end Transpose;
 
 	function VerticalCompare(v: UnboundedString_Vector.Vector; idx: out Integer; wall: out boolean) return Natural
 	is
@@ -70,59 +48,77 @@ package body solutionpk is
 		curr : Count_Type;
 		ileft, iright : Integer;
 		left, right : Unbounded_String;
+		valid : boolean := True;
+		limit : Count_Type;
 	begin
+		idx := 0;
 		wall := False;
-		for I in 0 .. UnboundedString_Vector.Length(v) -1 loop
+		for I in 0 .. UnboundedString_Vector.Length(v) -2 loop
 			curr := 0;
-			for J in 0 .. Count_Type'Min(I, UnboundedString_Vector.Length(v) - I) loop
+			valid := True;
+			limit := Count_Type'Min(I, UnboundedString_Vector.Length(v) - I -2);
+			Put_Line("Start: " & I'Image & " limit: " & limit'Image);
+			for J in 0 .. limit loop
 				ileft := Integer(I-J);
 				iright := Integer(I+1+J);
-				--Put_Line(": " & ileft'Image  & " R: " & iright'Image);
+				Put_Line(": " & ileft'Image  & " R: " & iright'Image);
 				if iright < Integer(UnboundedString_Vector.Length(v)) then
 					left := v(ileft) ;
 					right := v(iright);
-					if left = right then 
-						curr := curr + 1;
-					else 
+					Put_Line(": " & To_String(left)  & " R: " & To_String(right));
+					if left /= right then 
+						Put_Line("Fail!");
+						valid := False;
 						exit;
+					else
+						curr := J;
 					end if;
 				end if;
 			end loop;
-			if Integer(curr) > res then
-				if I-curr = 0 or I+1+curr = UnboundedString_Vector.Length(v) then
-					wall := True;
+			if valid and (I-curr = 0 or I+1+limit = UnboundedString_Vector.Length(v)-1) then
+				Put_Line("Hit!");
+				wall := True;
+				if Integer(limit + 1) > res then
+					idx := Integer(I) + 1;
+					res := Integer(limit) + 1;
 				end if;
-				idx := Integer(I) + 1;
-				res := Integer(curr);
+			else
+				Put_Line("Not good!");
 			end if;
 		end loop;
+		if res = 0 then
+			Put_Line("Reset");
+			wall := False;
+		end if;
 		return res;
 	end;
 
 	function MainLogic(v: UnboundedString_Vector.Vector) return Integer is
 		vwall, hwall : Boolean;
+		t : UnboundedString_Vector.Vector := Transpose(v);
 		best_vert: Integer;
 		idx_vert: Integer;
 		best_hor: Integer;
 		idx_hor: Integer;
 		total : Integer := 0;
 	begin
-		Put_Line("Input: ");
-		for I of v loop
-			Put_Line(To_String(I));
-		end loop;
+		Put_Line("--------------------------------------------------------------------------------");
+		Put_Line("Proc Start");
+		Put_Line("Vertical");
+		PrintVector(v);
 		best_vert := VerticalCompare(v, idx_vert, vwall);
-		best_hor := horizontalCompare(v, idx_hor, hwall);
-		Put_Line("Vertical: " & best_vert'Image & " " & idx_vert'Image);
-		Put_Line("Horizontal: " & best_hor'Image & " " & idx_hor'Image);
-		Put_Line("End");
-		Put_Line("");
+		Put_Line("Horizontal");
+		PrintVector(t);
+		best_hor := VerticalCompare(t, idx_hor, hwall);
+		Put_Line("Vertical best: " & best_vert'Image & " idx: " & idx_vert'Image & " wall: " & vwall'Image);
+		Put_Line("Horizontal best: " & best_hor'Image & " idx: " & idx_hor'Image & " wall: " & hwall'Image);
 
-		if hwall and best_hor >= best_vert then
+		if hwall then
 			total := idx_hor;
 		else
 			total := 100 * idx_vert; 
 		end if;
+		Put_Line("Local value: " & total'Image);
 		return total;
 	end;
 
@@ -137,13 +133,14 @@ package body solutionpk is
 		while not End_Of_File (F) loop
 			-- Capture the line
 			str := To_Unbounded_String(Get_Line (F));
-			Put_Line(To_String(str));
+			--Put_Line(To_String(str));
 
 			if Length(str) > 0 then
 				values.append(str);
 			else 
 				total := total + MainLogic(values);
 				values.clear;
+				Put_Line("Total: " & total'Image);
 			end if;
 		end loop;
 		total := total + MainLogic(values);
