@@ -70,14 +70,28 @@ def clone_mat(mat, v=-1):
         nm.append([v for _ in r])
     return nm
 
-def possible_moves(mat, c, l, o):
+#def add_cost_pm(c, l):
+
+__pm = (((-1, 0), Or.N), ((1, 0), Or.S), ((0, -1), Or.W), ((0, 1), Or.E))
+def possible_positions(mat, l):
     res = []
-    for m, no in [((-1, 0), Or.N), ((1, 0), Or.S), ((0, -1), Or.W), ((0, 1), Or.E)]:
+    for m, no in __pm:
         # Next location
         nl = add_pos(l, m)
         if get_mat(mat, nl) != '#':
-            nc = c + 1 + cost_pairs[o, no]
-            res.append((nc, nl, no))
+            res.append((nl, no))
+    res = tuple(res)
+    return res
+
+def possible_moves(mat_pp, pmc, clo):
+    if clo in pmc:
+        return pmc[clo]
+    c, l, o = clo
+    res = []
+    for nl, no in mat_pp[l[0]][l[1]]:
+        res.append((c + 1 + cost_pairs[o, no], nl, no))
+    res = set(res)
+    pmc[clo] = res
     return res
 
 def apply_path_to_mat(mat, seen):
@@ -87,23 +101,28 @@ def apply_path_to_mat(mat, seen):
         nm[r][c] = v
     return nm
 
-def walk_path_dijstra(mat, start_loc_or, c=0):
+def walk_path_dijstra(mat, mat_pp, pmc, start_loc_or, c=0, mx=1000000):
     seen = dict()
     hpq = list([(c, start_loc_or[0], start_loc_or[1])])
     best = 0
     while len(hpq)>0:
-        c, l, o = heapq.heappop(hpq)
+        clo = heapq.heappop(hpq)
+        c, l, o = clo
+        if c > mx:
+            continue
+        lo = clo[1:]
         # We got to the end
+        # print(l)
         if get_mat(mat, l) == 'E':
             if best == 0 or best > c:
                 best = c
-        if (l, o) in seen and seen[(l, o)] < c:
+        if lo in seen and seen[lo] < c:
             continue
         if best != 0 and c > best:
             continue
-        seen[(l, o)] = c
-        for nc, nl, no in possible_moves(mat, c, l, o):
-            heapq.heappush(hpq, (nc, nl, no))
+        seen[lo] = c
+        for ncnlno in possible_moves(mat_pp, pmc, clo):
+            heapq.heappush(hpq, ncnlno)
     return best, seen
 
 def remove_orient_seen(seen):
@@ -115,7 +134,7 @@ def remove_orient_seen(seen):
         ns[p] = v
     return ns
 
-def get_path(mat, seen, vt=0):
+def get_path(mat, mat_pp, seen, vt=0):
     ns = remove_orient_seen(seen)
     path_taken = set()
     #print_mat_pad(apply_path_to_mat(mat, ns))
@@ -128,7 +147,8 @@ def get_path(mat, seen, vt=0):
         #print("GP", cp, cv)
         nlp = []
         nlv = 0
-        for _, nl, _ in possible_moves(mat, 0, cp, Or.N):
+        #print(get_mat(mat_pp, cp))
+        for nl, _ in get_mat(mat_pp, cp):
             if nl not in ns:
                 continue
             nlv = ns[nl]
@@ -139,41 +159,55 @@ def get_path(mat, seen, vt=0):
         if len(nlp) > 1:
             print(nlp)
             exit(2)
+        elif len(nlp) == 0:
+            print(path_taken, cp)
         cp = nlp[0]
         cv = ns[cp]
     path_taken.add(cp)
     return path_taken
 
+def precalculate_possible_moves(mat):
+    mc = clone_mat(mat)
+    for ridx in range(1, len(mat)-1):
+        for cidx in range(1, len(mat[0])-1):
+            l = (ridx, cidx)
+            set_mat(mc, l, possible_positions(mat, l))
+    return mc
+
 def walk_all(mat, start_loc_or):
+    pmc = dict()
+    mat_pp = precalculate_possible_moves(mat)
     cnt = 0
     seen = dict()
     good_paths = set()
     res = set()
-    tgt, ps = walk_path_dijstra(mat, start_loc_or)
-    print("Start walk all")
-    good_paths |= get_path(mat, ps, 0)
+    tgt, ps = walk_path_dijstra(mat, mat_pp, pmc, start_loc_or)
+    print("Start walk all", tgt, len(ps))
+    good_paths |= get_path(mat, mat_pp, ps, 0)
     dq = deque([(0, start_loc_or[0], start_loc_or[1])])
     while len(dq) > 0:
-        c, l, o = dq.popleft()
+        clo = dq.popleft()
+        c, l, o = clo
         # If checked
         if l in seen and seen[l] <= c:
             continue
         seen[l] = c
         cnt += 1
         if l not in good_paths:
-            curpathbest, curpathseen = walk_path_dijstra(mat, (l, o), c)
+            curpathbest, curpathseen = walk_path_dijstra(mat, mat_pp, pmc, (l, o), c, tgt)
             if curpathbest != tgt:
                 continue
             print(l, o, c)
-            good_paths |= get_path(mat, curpathseen, c)
+            good_paths |= get_path(mat, mat_pp, curpathseen, c)
         res.add(l)
-        for nc, nl, no in possible_moves(mat, c, l, o):
-            dq.append((nc, nl, no))
+        for ncnlno in possible_moves(mat_pp, pmc, clo):
+            dq.append(ncnlno)
     print(cnt, len(res))
     return len(res)
 
 
 def entry_func(inp: str):
+    __pp_cache = dict()
     mat = [list(i) for i in inp.split('\n')]
     print_mat(mat)
     start_loc_or = (find_mat(mat, 'S'),Or.E)
