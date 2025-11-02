@@ -12,6 +12,7 @@ def entry_func(inp_str):
         src, dst = l.strip().split(" => ")
         if src not in pos_transf:
             pos_transf[src] = list()
+        print(src, dst)
         pos_transf[src].append(dst)
     print(pos_transf)
     ansset = set()
@@ -19,11 +20,12 @@ def entry_func(inp_str):
     inpstr = inpstr.strip()
     print(inpstr)
     for k in pos_transf.keys():
-        print(inpstr.count(k))
+        print("RF", k, inpstr.count(k))
         idx = inpstr.find(k, 0)
-        while idx > 0:
+        while idx >= 0:
             for pv in pos_transf[k]:
                 pm = inpstr[:idx] + pv + inpstr[idx+len(k):]
+                #print(pm)
                 ansset.add(pm)
             idx = inpstr.find(k, idx+1)
     return len(ansset)
@@ -31,12 +33,14 @@ def entry_func(inp_str):
 class TestChallenge(unittest.TestCase):
     def test_basic(self):
         testPairs = [
-            ('''H => HO
+            ('''
+             H => HO
              H => OH
              O => HH
 
              HOH''', 4),
-            ('''H => HO
+            ('''
+             H => HO
              H => OH
              O => HH
 
