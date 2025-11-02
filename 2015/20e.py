@@ -10,9 +10,10 @@ from sympy import divisors
 from pudb import set_trace
 
 def calculateV(inp):
-    factors = divisors(inp)
-    #print(factors)
-    return sum(factors) * 10
+    LIMV = 50
+    divs = divisors(inp)
+    divs = [i for i in divs if int(inp/i) < 51]
+    return sum(divs) * 11
 
 def midCalc(top, bot):
     return ((top-bot)/2) + bot
@@ -28,16 +29,7 @@ def entry_func(inp_str):
 class TestChallenge(unittest.TestCase):
     def test_v(self):
         testPairs = [
-            (1, 10),
-            (2, 30),
-            (3, 40),
-            (4, 70),
-            (5, 60),
-            (6, 120),
-            (7, 80),
-            (8, 150),
-            (9, 130),
-            (51, 720),
+            (51, 781),
         ]
         for inp, res in testPairs:
             t = inp
@@ -46,15 +38,7 @@ class TestChallenge(unittest.TestCase):
 
     def test_basic(self):
         testPairs = [
-            ('''10''', 1),
-            ('''30''', 2),
-            ('''40''', 3),
-            ('''70''', 4),
-            ('''60''', 4),
-            ('''120''', 6),
-            ('''80''', 6),
-            ('''150''', 8),
-            ('''130''', 8),
+            ('''1365''', 60),
         ]
         for inp, res in testPairs:
             t = inp
