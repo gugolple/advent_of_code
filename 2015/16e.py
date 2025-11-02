@@ -50,7 +50,8 @@ class TestChallenge(unittest.TestCase):
         testPairs = [
             ('''Sue 1: cats: 6, children: 3, perfumes: 0
                 Sue 2: pomeranians: 10, cats: 3, vizslas: 5
-                Sue 3: cats: 7''', 3),
+                Sue 3: cats: 7
+                Sue 4: trees: 7''', 4),
         ]
         for inp, res in testPairs:
             t = inp

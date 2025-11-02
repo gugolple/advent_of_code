@@ -136,6 +136,8 @@ class TestChallenge(unittest.TestCase):
         testPairs = [
             ("""123 -> x
                 456 -> y
+                1 -> a
+                f AND a -> b
                 x AND y -> d
                 x OR y -> e
                 x LSHIFT 2 -> f

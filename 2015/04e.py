@@ -18,8 +18,8 @@ def entry_func(inp_str) -> int:
 class TestChallenge(unittest.TestCase):
     def test_basic(self):
         testPairs = [
-            ("abcdef", 609043),
-            ("pqrstuv", 1048970),
+            ("abcdef", 6742839),
+            ("pqrstuv", 5714438),
         ]
         for inp, res in testPairs:
             self.assertEqual(entry_func(inp), res)
